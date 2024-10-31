@@ -1,118 +1,122 @@
 import 'package:flutter/material.dart';
+import 'feature_card.dart';
+import 'app_bar_custom.dart';
+import 'error_home_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+
+
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  _HomeScreenState createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  bool isConnected = false;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Car Module App'),
-        backgroundColor: Colors.deepPurple,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color.fromARGB(255, 28, 26, 31), // Jasny szary
+              Color.fromARGB(255, 49, 49, 49), // Ciemny szary
+            ],
+          ),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Tytuł sekcji
-            const Text(
-              'Wybierz funkcję',
-              style: TextStyle(
-                fontSize: 24.0,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
-            // Rząd z przyciskami opcji
+            const AppBarCustom(title: 'Car Module',),
+            const SizedBox(height: 16.0),
+            // Grid z przyciskami opcji
             Expanded(
-              child: GridView.count(
-                crossAxisCount: 2,
-                mainAxisSpacing: 16.0,
-                crossAxisSpacing: 16.0,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32.0), // Przesunięcie kart od krawędzi ekranu
+                child: GridView.extent(
+                  maxCrossAxisExtent: 180.0, // Określenie maksymalnej szerokości dla kart
+                  mainAxisSpacing: 16.0,
+                  crossAxisSpacing: 16.0,
+                  childAspectRatio: 0.75, // Zwiększenie wysokości kart
+                  children: [
+                    FeatureCard(
+                      icon: Icons.error_outline,
+                      label: 'Odczyt błędów',
+                      color: const Color.fromARGB(255, 174, 159, 44),
+                      onTap: () {
+                        Navigator.pushNamed(context, '/error');
+                      },
+                    ),
+                    FeatureCard(
+                      icon: Icons.speed,
+                      label: 'Dane na żywo',
+                      color: Colors.purple,
+                      onTap: () {
+                        // TODO: Dodaj nawigację do ekranu danych na żywo
+                      },
+                    ),
+                    FeatureCard(
+                      icon: Icons.insights,
+                      label: 'Historia odczytów',
+                      color: Colors.green,
+                      onTap: () {
+                        // TODO: Dodaj nawigację do ekranu historii odczytów
+                      },
+                    ),
+                    FeatureCard(
+                      icon: Icons.settings,
+                      label: 'Ustawienia',
+                      color: Colors.deepPurple,
+                      onTap: () {
+                        // TODO: Dodaj nawigację do ekranu ustawień
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Status połączenia i przycisk
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 16.0),
+              decoration: BoxDecoration(
+                color: const Color.fromARGB(255, 218, 219, 223), // Ciemniejsze tło kontenera
+                borderRadius: BorderRadius.circular(15.0),
+              ),
+              child: Column(
                 children: [
-                  _buildFeatureCard(
-                    context,
-                    icon: Icons.error_outline,
-                    label: 'Odczyt Błędów',
-                    onTap: () {
-                      // TODO: Dodaj nawigację do ekranu odczytu błędów
-                    },
+                  Text(
+                    isConnected ? 'Połączenie: połączono' : 'Połączenie: brak połączenia',
+                    style: const TextStyle(
+                      fontSize: 16.0,
+                      color: Color.fromARGB(255, 0, 0, 0), // Jasny tekst dla ciemnego tła
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  _buildFeatureCard(
-                    context,
-                    icon: Icons.speed,
-                    label: 'Dane na Żywo',
-                    onTap: () {
-                      // TODO: Dodaj nawigację do ekranu danych na żywo
+                  const SizedBox(height: 10),
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        isConnected = !isConnected;
+                      });
                     },
-                  ),
-                  _buildFeatureCard(
-                    context,
-                    icon: Icons.insights,
-                    label: 'Statystyki',
-                    onTap: () {
-                      // TODO: Dodaj nawigację do ekranu statystyk
-                    },
-                  ),
-                  _buildFeatureCard(
-                    context,
-                    icon: Icons.bluetooth,
-                    label: 'Połącz z OBD',
-                    onTap: () {
-                      // TODO: Dodaj nawigację do połączenia z modułem OBD
-                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isConnected ? Colors.red : Colors.green,
+                      padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 16.0),
+                    ),
+                    child: Text(
+                      isConnected ? 'Rozłącz' : 'Połącz',
+                      style: const TextStyle(color: Colors.black),
+                    ),
                   ),
                 ],
               ),
             ),
-            // Przyciski akcji na dole
-            ElevatedButton(
-              onPressed: () {
-                // TODO: Akcja połączenia z modułem OBD
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                padding: const EdgeInsets.symmetric(vertical: 16.0),
-              ),
-              child: const Text('Połącz z OBD'),
-            ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFeatureCard(BuildContext context,
-      {required IconData icon,
-      required String label,
-      required Function() onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Card(
-        color: Colors.deepPurple[200],
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(15.0),
-        ),
-        elevation: 5,
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 48.0, color: Colors.white),
-              const SizedBox(height: 10),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 16.0,
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
         ),
       ),
     );
