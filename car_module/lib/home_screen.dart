@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'feature_card.dart';
 import 'app_bar_custom.dart';
 import 'error_home_screen.dart';
-
-
+import 'white_container.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -81,39 +80,43 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             // Status połączenia i przycisk
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 16.0),
-              decoration: BoxDecoration(
-                color: const Color.fromARGB(255, 218, 219, 223), // Ciemniejsze tło kontenera
-                borderRadius: BorderRadius.circular(15.0),
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    isConnected ? 'Połączenie: połączono' : 'Połączenie: brak połączenia',
-                    style: const TextStyle(
-                      fontSize: 16.0,
-                      color: Color.fromARGB(255, 0, 0, 0), // Jasny tekst dla ciemnego tła
-                      fontWeight: FontWeight.bold,
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: WhiteContainer(
+                child: Column(
+                  children: [
+                    Text(
+                      isConnected ? 'Połączenie: połączono' : 'Połączenie: brak połączenia',
+                      style: const TextStyle(
+                        fontSize: 16.0,
+                        color: Color.fromARGB(255, 0, 0, 0), // Jasny tekst dla ciemnego tła
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        isConnected = !isConnected;
-                      });
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isConnected ? Colors.red : Colors.green,
-                      padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 16.0),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            isConnected = !isConnected;
+                          });
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isConnected ? Colors.red : Colors.green,
+                          padding: const EdgeInsets.symmetric(vertical: 16.0),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20.0),
+                          ),
+                        ),
+                        child: Text(
+                          isConnected ? 'Rozłącz' : 'Połącz',
+                          style: const TextStyle(color: Colors.black),
+                        ),
+                      ),
                     ),
-                    child: Text(
-                      isConnected ? 'Rozłącz' : 'Połącz',
-                      style: const TextStyle(color: Colors.black),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],
