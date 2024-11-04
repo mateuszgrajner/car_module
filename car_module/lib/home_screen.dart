@@ -4,6 +4,7 @@ import 'app_bar_custom.dart';
 import 'error_home_screen.dart';
 import 'white_container.dart';
 
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -56,7 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       label: 'Dane na żywo',
                       color: Colors.purple,
                       onTap: () {
-                        // TODO: Dodaj nawigację do ekranu danych na żywo
+                         Navigator.pushNamed(context, '/data_home');
                       },
                     ),
                     FeatureCard(
@@ -64,7 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       label: 'Historia odczytów',
                       color: Colors.green,
                       onTap: () {
-                        // TODO: Dodaj nawigację do ekranu historii odczytów
+                        Navigator.pushNamed(context, '/history_home');
                       },
                     ),
                     FeatureCard(

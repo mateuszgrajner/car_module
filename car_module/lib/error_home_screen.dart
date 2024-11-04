@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'app_bar_custom.dart';
 import 'white_container.dart';
+import 'loading_dialog.dart';
 import 'dart:math';
 
 class ErrorHomeScreen extends StatefulWidget {
@@ -14,6 +15,7 @@ class ErrorHomeScreen extends StatefulWidget {
 
 class _ErrorHomeScreenState extends State<ErrorHomeScreen> {
   List<Map<String, String>> errorCodes = [];
+  bool isDeleted = false;
 
   void generateRandomErrors() {
     final List<Map<String, String>> sampleErrors = [
@@ -26,6 +28,24 @@ class _ErrorHomeScreenState extends State<ErrorHomeScreen> {
     final random = Random();
     setState(() {
       errorCodes = List.generate(4, (index) => sampleErrors[random.nextInt(sampleErrors.length)]);
+    });
+  }
+
+  Future<void> _showLoadingDialog(String message) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => LoadingDialog(message: message),
+    );
+
+    await Future.delayed(const Duration(seconds: 2));
+
+    Navigator.of(context).pop(); // Zamknięcie dialogu po odczekaniu
+  }
+
+  void _deleteErrors() {
+    setState(() {
+      errorCodes.clear();
     });
   }
 
@@ -51,43 +71,57 @@ class _ErrorHomeScreenState extends State<ErrorHomeScreen> {
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                child: ListView.builder(
-                  itemCount: errorCodes.length,
-                  itemBuilder: (context, index) {
-                    final error = errorCodes[index];
-                    return Card(
-                      color: const Color.fromARGB(255, 153, 45, 163),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15.0),
-                      ),
-                      margin: const EdgeInsets.only(bottom: 16.0),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              error['code'] ?? '',
-                              style: const TextStyle(
-                                fontSize: 20.0,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(height: 8.0),
-                            Text(
-                              error['description'] ?? '',
-                              style: const TextStyle(
-                                fontSize: 16.0,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
+                child: errorCodes.isEmpty
+                    ? Center(
+                        child: Text(
+                          isDeleted
+                              ? 'Brak błędów'
+                              : 'Kliknij odczyt aby rozpocząć skanowanie',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18.0,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
                         ),
+                      )
+                    : ListView.builder(
+                        itemCount: errorCodes.length,
+                        itemBuilder: (context, index) {
+                          final error = errorCodes[index];
+                          return Card(
+                            color: const Color.fromARGB(255, 153, 45, 163),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15.0),
+                            ),
+                            margin: const EdgeInsets.only(bottom: 16.0),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    error['code'] ?? '',
+                                    style: const TextStyle(
+                                      fontSize: 20.0,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8.0),
+                                  Text(
+                                    error['description'] ?? '',
+                                    style: const TextStyle(
+                                      fontSize: 16.0,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
               ),
             ),
             Padding(
@@ -97,16 +131,38 @@ class _ErrorHomeScreenState extends State<ErrorHomeScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     ElevatedButton(
-                      onPressed: () {
-                        generateRandomErrors();
+                      onPressed: () async {
+                        if (errorCodes.isEmpty) {
+                          if (!isDeleted) {
+                            await _showLoadingDialog('Trwa skanowanie...');
+                            generateRandomErrors();
+                          } else {
+                            await _showLoadingDialog('Trwa skanowanie...');
+                            generateRandomErrors();
+                            setState(() {
+                              isDeleted = false;
+                            });
+                          }
+                        } else {
+                          await _showLoadingDialog('Usuwanie błędów...');
+                          _deleteErrors();
+                          setState(() {
+                            isDeleted = true;
+                          });
+                        }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 16.0),
+                        backgroundColor: errorCodes.isEmpty
+                            ? (isDeleted ? Colors.green : Colors.green)
+                            : Colors.yellow,
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 32.0, vertical: 16.0),
                       ),
-                      child: const Text(
-                        'Odczyt',
-                        style: TextStyle(color: Colors.black),
+                      child: Text(
+                        errorCodes.isEmpty
+                            ? (isDeleted ? 'Odczyt' : 'Odczyt')
+                            : 'Kasowanie',
+                        style: const TextStyle(color: Colors.black),
                       ),
                     ),
                     ElevatedButton(
@@ -115,7 +171,8 @@ class _ErrorHomeScreenState extends State<ErrorHomeScreen> {
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red,
-                        padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 16.0),
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 32.0, vertical: 16.0),
                       ),
                       child: const Text(
                         'Wróć',
