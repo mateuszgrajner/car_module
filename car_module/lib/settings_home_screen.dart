@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'app_bar_custom.dart';
-import 'feature_card.dart';
 import 'white_container.dart';
 
-class ReadingsHistoryScreen extends StatelessWidget {
-  const ReadingsHistoryScreen({super.key});
+class SettingsScreen extends StatelessWidget {
+  const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -23,39 +22,21 @@ class ReadingsHistoryScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const AppBarCustom(title: 'Historia odczytów'),
+            const AppBarCustom(title: 'Ustawienia'),
             const SizedBox(height: 16.0),
-            // Grid z przyciskami opcji
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                child: GridView.extent(
-                  maxCrossAxisExtent: 200.0,
-                  mainAxisSpacing: 16.0,
-                  crossAxisSpacing: 16.0,
-                  childAspectRatio: 0.75,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    FeatureCard(
-                      icon: Icons.receipt_long,
-                      label: 'Dziennik odczytów',
-                      color: const Color.fromARGB(255, 86, 35, 135),
-                      onTap: () {
-                        Navigator.pushNamed(context, '/readings_screen');
-                      },
-                    ),
-                    FeatureCard(
-                      icon: Icons.show_chart,
-                      label: 'Podsumowanie okresowe',
-                      color: const Color.fromARGB(255, 153, 45, 163),
-                      onTap: () {
-                        Navigator.pushNamed(context, '/summary_screen');
-                      },
-                    ),
+                    _buildSettingsButton('Wersja aplikacji v1.0.0'),
+                    _buildSettingsButton('Twórcy'),
+                    _buildSettingsButton('Język'),
                   ],
                 ),
               ),
             ),
-            // Przycisk powrotu
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: WhiteContainer(
@@ -80,6 +61,26 @@ class ReadingsHistoryScreen extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSettingsButton(String label) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: ElevatedButton(
+        onPressed: () {},
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color.fromARGB(255, 153, 45, 163),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+        ),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            label,
+            style: const TextStyle(color: Colors.white, fontSize: 16.0),
+          ),
         ),
       ),
     );

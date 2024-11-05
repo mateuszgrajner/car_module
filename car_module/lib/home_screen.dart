@@ -73,7 +73,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       label: 'Ustawienia',
                       color: Colors.deepPurple,
                       onTap: () {
-                        // TODO: Dodaj nawigację do ekranu ustawień
+                        Navigator.pushNamed(context, '/settings_screen');
                       },
                     ),
                   ],

@@ -1,8 +1,11 @@
 import 'package:car_module/engine_temp_screen.dart';
 import 'package:car_module/fuel_screen.dart';
 import 'package:car_module/history_home_screen.dart';
+import 'package:car_module/settings_home_screen.dart';
 import 'package:car_module/speed_screen.dart';
 import 'package:car_module/history_home_screen.dart';
+import 'package:car_module/summary_overviev_screen.dart';
+import 'readings_history_screen.dart';
 
 import 'data_home_screen.dart';
 import 'engine_rpm_screen.dart';
@@ -33,6 +36,9 @@ class MyApp extends StatelessWidget {
         '/speed_screen': (context) => const VehicleSpeedScreen(),
         '/fuel_screen': (context) => const FuelConsumptionScreen(),
         '/history_home': (context) => const ReadingsHistoryScreen(),
+        '/readings_screen': (context) => const ReadingsLogScreen(),
+        '/summary_screen': (context) => const SummaryOverviewScreen(),
+        '/settings_screen': (context) => const SettingsScreen(),
         
       },
       debugShowCheckedModeBanner: false,
