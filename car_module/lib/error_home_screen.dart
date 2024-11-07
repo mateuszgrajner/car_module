@@ -46,7 +46,21 @@ class _ErrorHomeScreenState extends State<ErrorHomeScreen> {
   void _deleteErrors() {
     setState(() {
       errorCodes.clear();
+      isDeleted = true;
     });
+  }
+
+  void _handleButtonPress() async {
+    if (errorCodes.isEmpty) {
+      await _showLoadingDialog('Trwa skanowanie...');
+      generateRandomErrors();
+      setState(() {
+        isDeleted = false;
+      });
+    } else {
+      await _showLoadingDialog('Usuwanie błędów...');
+      _deleteErrors();
+    }
   }
 
   @override
@@ -74,9 +88,7 @@ class _ErrorHomeScreenState extends State<ErrorHomeScreen> {
                 child: errorCodes.isEmpty
                     ? Center(
                         child: Text(
-                          isDeleted
-                              ? 'Brak błędów'
-                              : 'Kliknij odczyt aby rozpocząć skanowanie',
+                          isDeleted ? 'Brak błędów' : 'Kliknij odczyt aby rozpocząć skanowanie',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 18.0,
@@ -131,37 +143,13 @@ class _ErrorHomeScreenState extends State<ErrorHomeScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     ElevatedButton(
-                      onPressed: () async {
-                        if (errorCodes.isEmpty) {
-                          if (!isDeleted) {
-                            await _showLoadingDialog('Trwa skanowanie...');
-                            generateRandomErrors();
-                          } else {
-                            await _showLoadingDialog('Trwa skanowanie...');
-                            generateRandomErrors();
-                            setState(() {
-                              isDeleted = false;
-                            });
-                          }
-                        } else {
-                          await _showLoadingDialog('Usuwanie błędów...');
-                          _deleteErrors();
-                          setState(() {
-                            isDeleted = true;
-                          });
-                        }
-                      },
+                      onPressed: _handleButtonPress,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: errorCodes.isEmpty
-                            ? (isDeleted ? Colors.green : Colors.green)
-                            : Colors.yellow,
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 32.0, vertical: 16.0),
+                        backgroundColor: errorCodes.isEmpty ? Colors.green : Colors.yellow,
+                        padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 16.0),
                       ),
                       child: Text(
-                        errorCodes.isEmpty
-                            ? (isDeleted ? 'Odczyt' : 'Odczyt')
-                            : 'Kasowanie',
+                        errorCodes.isEmpty ? 'Odczyt' : 'Kasowanie',
                         style: const TextStyle(color: Colors.black),
                       ),
                     ),
@@ -171,8 +159,7 @@ class _ErrorHomeScreenState extends State<ErrorHomeScreen> {
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red,
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 32.0, vertical: 16.0),
+                        padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 16.0),
                       ),
                       child: const Text(
                         'Wróć',

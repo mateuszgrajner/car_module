@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'feature_card.dart';
 import 'app_bar_custom.dart';
-import 'error_home_screen.dart';
 import 'white_container.dart';
-
+import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,6 +13,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   bool isConnected = false;
+  BluetoothDevice? connectedDevice;
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const AppBarCustom(title: 'Car Module',),
+            const AppBarCustom(title: 'Car Module'),
             const SizedBox(height: 16.0),
             // Grid z przyciskami opcji
             Expanded(
@@ -57,7 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       label: 'Dane na żywo',
                       color: Colors.purple,
                       onTap: () {
-                         Navigator.pushNamed(context, '/data_home');
+                        Navigator.pushNamed(context, '/data_home');
                       },
                     ),
                     FeatureCard(
@@ -87,7 +87,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   children: [
                     Text(
-                      isConnected ? 'Połączenie: połączono' : 'Połączenie: brak połączenia',
+                      isConnected
+                          ? 'Połączenie: połączono z ${connectedDevice?.name ?? 'Nieznane urządzenie'}'
+                          : 'Połączenie: brak połączenia',
                       style: const TextStyle(
                         fontSize: 16.0,
                         color: Color.fromARGB(255, 0, 0, 0), // Jasny tekst dla ciemnego tła
@@ -98,10 +100,21 @@ class _HomeScreenState extends State<HomeScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            isConnected = !isConnected;
-                          });
+                        onPressed: () async {
+                          if (isConnected) {
+                            setState(() {
+                              isConnected = false;
+                              connectedDevice = null;
+                            });
+                          } else {
+                            final selectedDevice = await Navigator.pushNamed(context, '/bluetooth');
+                            if (selectedDevice != null && selectedDevice is BluetoothDevice) {
+                              setState(() {
+                                isConnected = true;
+                                connectedDevice = selectedDevice;
+                              });
+                            }
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: isConnected ? Colors.red : Colors.green,
