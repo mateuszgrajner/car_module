@@ -1045,6 +1045,8 @@ ErrorCode(id: 1000, code: 'P1466', description: 'Evaporative Emission Control Sy
       }
     });
 
+    print('Dodano ${errorCodes.length} kodów błędów do bazy danych.');
+
     // Oznaczamy, że baza danych została zainicjowana
     await prefs.setBool('isDatabaseInitialized', true);
   }

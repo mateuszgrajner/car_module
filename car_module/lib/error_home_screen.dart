@@ -3,6 +3,8 @@ import 'app_bar_custom.dart';
 import 'white_container.dart';
 import 'loading_dialog.dart';
 import 'dart:math';
+import 'package:car_module/database_helper.dart';
+import 'package:car_module/error_code_model.dart';
 
 class ErrorHomeScreen extends StatefulWidget {
   final Color color;
@@ -14,22 +16,37 @@ class ErrorHomeScreen extends StatefulWidget {
 }
 
 class _ErrorHomeScreenState extends State<ErrorHomeScreen> {
-  List<Map<String, String>> errorCodes = [];
+  List<ErrorCode> errorCodes = [];
   bool isDeleted = false;
 
-  void generateRandomErrors() {
-    final List<Map<String, String>> sampleErrors = [
-      {'code': 'P0301', 'description': 'Cylinder 1 - misfire detected'},
-      {'code': 'P0123', 'description': 'Throttle/Pedal Position Sensor/Switch A Circuit High'},
-      {'code': 'P0169', 'description': 'Incorrect Fuel Composition'},
-      {'code': 'O5523', 'description': 'Steering Column Position Sensor Malfunction'},
-    ];
+  Future<void> generateRandomErrors() async {
+  final dbHelper = DatabaseHelper.instance;
+  final errorCodeCount = await dbHelper.getErrorCodeCount();
 
-    final random = Random();
+  if (errorCodeCount == 0) {
+    // Brak dostępnych kodów błędów w bazie danych
     setState(() {
-      errorCodes = List.generate(4, (index) => sampleErrors[random.nextInt(sampleErrors.length)]);
+      errorCodes = [];
     });
+    return;
   }
+
+  print('Pobieram wszystkie kody błędów...');
+  // Pobierz wszystkie kody błędów
+  final allErrorCodes = await dbHelper.getAllErrorCodes();
+  print('Pobrane kody błędów: ${allErrorCodes.length}');
+
+  // Generowanie losowych kodów błędów z bazy danych
+  final random = Random();
+  final selectedErrorCodes = List<ErrorCode>.generate(
+    allErrorCodes.length < 4 ? allErrorCodes.length : 4,
+    (index) => allErrorCodes[random.nextInt(allErrorCodes.length)],
+  );
+
+  setState(() {
+    errorCodes = selectedErrorCodes;
+  });
+}
 
   Future<void> _showLoadingDialog(String message) async {
     showDialog(
@@ -51,17 +68,29 @@ class _ErrorHomeScreenState extends State<ErrorHomeScreen> {
   }
 
   void _handleButtonPress() async {
-    if (errorCodes.isEmpty) {
-      await _showLoadingDialog('Trwa skanowanie...');
-      generateRandomErrors();
-      setState(() {
-        isDeleted = false;
-      });
-    } else {
-      await _showLoadingDialog('Usuwanie błędów...');
-      _deleteErrors();
+  if (errorCodes.isEmpty) {
+    await _showLoadingDialog('Trwa skanowanie...');
+    await generateRandomErrors();
+
+    // Zapisz odczyt do bazy danych
+    if (errorCodes.isNotEmpty) {
+      final dbHelper = DatabaseHelper.instance;
+      final now = DateTime.now();
+      await dbHelper.insertReading(
+        '${now.day}.${now.month}.${now.year}',
+        '${now.hour}:${now.minute}',
+        errorCodes,
+      );
     }
+
+    setState(() {
+      isDeleted = false;
+    });
+  } else {
+    await _showLoadingDialog('Usuwanie błędów...');
+    _deleteErrors();
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -113,7 +142,7 @@ class _ErrorHomeScreenState extends State<ErrorHomeScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    error['code'] ?? '',
+                                    error.code,
                                     style: const TextStyle(
                                       fontSize: 20.0,
                                       fontWeight: FontWeight.bold,
@@ -122,7 +151,7 @@ class _ErrorHomeScreenState extends State<ErrorHomeScreen> {
                                   ),
                                   const SizedBox(height: 8.0),
                                   Text(
-                                    error['description'] ?? '',
+                                    error.description,
                                     style: const TextStyle(
                                       fontSize: 16.0,
                                       color: Colors.white,

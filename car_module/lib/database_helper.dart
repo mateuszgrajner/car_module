@@ -27,8 +27,6 @@ class DatabaseHelper {
     );
   }
 
-  
-
   Future<void> _createDB(Database db, int version) async {
     // Tworzymy tabelę dla kodów błędów
     await db.execute('''
@@ -60,6 +58,20 @@ class DatabaseHelper {
     ''');
   }
 
+  // Definicja metody getAllErrorCodes()
+  Future<List<ErrorCode>> getAllErrorCodes() async {
+    final db = await instance.database;
+    final result = await db.query('error_codes');
+
+    return result.map((map) => ErrorCode.fromMap(map)).toList();
+  }
+
+  Future<int> getErrorCodeCount() async {
+    final db = await instance.database;
+    final result = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM error_codes'));
+    return result ?? 0;
+  }
+
   Future<void> insertReading(String date, String time, List<ErrorCode> errors) async {
     final db = await instance.database;
 
@@ -81,30 +93,40 @@ class DatabaseHelper {
   }
 
   Future<List<Map<String, dynamic>>> getAllReadingsWithErrors() async {
-    final db = await instance.database;
+  final db = await instance.database;
 
-    // Pobieranie wszystkich odczytów z błędami
-    final readings = await db.query('readings_log');
-    List<Map<String, dynamic>> result = [];
+  // Pobieranie wszystkich odczytów z błędami
+  final readings = await db.query('readings_log');
+  List<Map<String, dynamic>> result = [];
 
-    for (var reading in readings) {
-      final errors = await db.query(
-        'reading_errors',
-        where: 'reading_id = ?',
-        whereArgs: [reading['id']],
-      );
+  for (var reading in readings) {
+    final errors = await db.query(
+      'reading_errors',
+      where: 'reading_id = ?',
+      whereArgs: [reading['id']],
+    );
 
-      result.add({
-        'id': reading['id'],
-        'date': reading['date'],
-        'time': reading['time'],
-        'errorCount': reading['error_count'],
-        'errors': errors,
-      });
-    }
+    // Przekształć szczegóły błędów do odpowiedniego formatu
+    List<Map<String, String>> errorDetails = errors.map((error) {
+      return {
+        'code': error['code'] as String,
+        'description': error['description'] as String,
+      };
+    }).toList();
 
-    return result;
+    result.add({
+      'id': reading['id'],
+      'date': reading['date'],
+      'time': reading['time'],
+      'errorCount': reading['error_count'],
+      'errors': errorDetails,
+    });
   }
+
+  return result;
+}
+
+
 
   Future<void> close() async {
     final db = await instance.database;

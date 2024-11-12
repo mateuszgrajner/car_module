@@ -2,56 +2,52 @@ import 'package:flutter/material.dart';
 import 'app_bar_custom.dart';
 import 'white_container.dart';
 import 'reading_widget_card.dart';
+import 'package:car_module/database_helper.dart';
 
-class ReadingsLogScreen extends StatelessWidget {
+class ReadingsLogScreen extends StatefulWidget {
   const ReadingsLogScreen({super.key});
 
   @override
+  _ReadingsLogScreenState createState() => _ReadingsLogScreenState();
+}
+
+class _ReadingsLogScreenState extends State<ReadingsLogScreen> {
+  List<Map<String, dynamic>> readingsLog = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadReadingsLog();
+  }
+
+  Future<void> _loadReadingsLog() async {
+  setState(() {
+    isLoading = true;
+  });
+
+  final dbHelper = DatabaseHelper.instance;
+  final allReadings = await dbHelper.getAllReadingsWithErrors();
+
+  setState(() {
+    readingsLog = allReadings.map((reading) {
+      // Formatowanie godziny i minut
+      final timeParts = reading['time'].split(':');
+      final hours = timeParts[0].padLeft(2, '0');
+      final minutes = timeParts[1].padLeft(2, '0');
+      final formattedTime = '$hours:$minutes';
+
+      return {
+        ...reading,
+        'time': formattedTime,
+      };
+    }).toList();
+    isLoading = false;
+  });
+}
+
+  @override
   Widget build(BuildContext context) {
-    List<Map<String, dynamic>> readingsLog = [
-      {
-        'date': '29.10.2024',
-        'time': '14:30',
-        'errorCount': 3,
-        'errors': [
-          {'code': 'P0301', 'description': 'Cylinder 1 - misfire detected'},
-          {'code': 'P0123', 'description': 'Throttle Position Sensor High'},
-          {'code': 'O5523', 'description': 'Steering Column Position Sensor Malfunction'},
-          {'code': 'O5523', 'description': 'Steering Column Position Sensor Malfunction'},
-          {'code': 'O5523', 'description': 'Steering Column Position Sensor Malfunction'},
-          {'code': 'O5523', 'description': 'Steering Column Position Sensor Malfunction'},
-        ],
-      },
-      {
-        'date': '11.10.2024',
-        'time': '09:15',
-        'errorCount': 2,
-        'errors': [
-          {'code': 'P0456', 'description': 'Evaporative Emission System Leak Detected'},
-          {'code': 'P0507', 'description': 'Idle Control System RPM Higher Than Expected'},
-        ],
-      },
-      {
-        'date': '11.10.2024',
-        'time': '09:15',
-        'errorCount': 2,
-        'errors': [
-          {'code': 'P0456', 'description': 'Evaporative Emission System Leak Detected'},
-          {'code': 'P0507', 'description': 'Idle Control System RPM Higher Than Expected'},
-        ],
-      },
-      {
-        'date': '11.10.2024',
-        'time': '09:15',
-        'errorCount': 2,
-        'errors': [
-          {'code': 'P0456', 'description': 'Evaporative Emission System Leak Detected'},
-          {'code': 'P0507', 'description': 'Idle Control System RPM Higher Than Expected'},
-        ],
-      },
-    ];
-
-
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -72,18 +68,40 @@ class ReadingsLogScreen extends StatelessWidget {
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                child: ListView.builder(
-                  itemCount: readingsLog.length,
-                  itemBuilder: (context, index) {
-                    final reading = readingsLog[index];
-                    return ReadingCardWidget(
-                      date: reading['date'],
-                      time: reading['time'],
-                      errorCount: reading['errorCount'],
-                      errorDetails: List<Map<String, String>>.from(reading['errors']),
-                    );
-                  },
-                ),
+                child: isLoading
+                    ? const Center(
+                        child: CircularProgressIndicator(),
+                      )
+                    : readingsLog.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'Brak zapisanych odczytów',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18.0,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          )
+                        : ListView.builder(
+                            itemCount: readingsLog.length,
+                            itemBuilder: (context, index) {
+                              final reading = readingsLog[index];
+                              return ReadingCardWidget(
+                                date: reading['date'],
+                                time: reading['time'],
+                                errorCount: reading['errorCount'],
+                                errorDetails: List<Map<String, String>>.from(
+                                  reading['errors'].map((error) {
+                                    return {
+                                      'code': error['code']?.toString() ?? '',
+                                      'description': error['description']?.toString() ?? '',
+                                    };
+                                  }),
+                                ),
+                              );
+                            },
+                          ),
               ),
             ),
             Padding(
