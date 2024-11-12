@@ -3,7 +3,6 @@ import 'package:car_module/fuel_screen.dart';
 import 'package:car_module/history_home_screen.dart';
 import 'package:car_module/settings_home_screen.dart';
 import 'package:car_module/speed_screen.dart';
-import 'package:car_module/history_home_screen.dart';
 import 'package:car_module/summary_overviev_screen.dart';
 import 'package:car_module/bluetooth_connection_screen.dart'; 
 import 'readings_history_screen.dart';
@@ -12,8 +11,12 @@ import 'engine_rpm_screen.dart';
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import 'error_home_screen.dart';
+import 'package:car_module/error_code_model.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized(); // Aby mieć pewność, że wszystko jest zainicjalizowane
+  await fillDatabaseWithSampleData(); // Inicjalizacja bazy danych z przykładowymi danymi
+
   runApp(const MyApp());
 }
 
@@ -40,7 +43,7 @@ class MyApp extends StatelessWidget {
         '/readings_screen': (context) => const ReadingsLogScreen(),
         '/summary_screen': (context) => const SummaryOverviewScreen(),
         '/settings_screen': (context) => const SettingsScreen(),
-        '/bluetooth': (context) => const BluetoothConnectionScreen(), // Dodajemy nową trasę
+        '/bluetooth': (context) => const BluetoothConnectionScreen(), 
       },
       debugShowCheckedModeBanner: false,
     );

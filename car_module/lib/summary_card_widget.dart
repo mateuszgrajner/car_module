@@ -60,7 +60,7 @@ class SummaryCardWidget extends StatelessWidget {
                     ],
                   ),
                 );
-              }).toList(),
+              }),
             ],
           ),
         ),

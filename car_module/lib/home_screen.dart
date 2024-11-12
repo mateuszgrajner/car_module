@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'feature_card.dart';
 import 'app_bar_custom.dart';
 import 'white_container.dart';
-import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -13,6 +13,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   bool isConnected = false;
+  bool isTestMode = false;
   BluetoothDevice? connectedDevice;
 
   @override
@@ -80,7 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            // Status połączenia i przycisk
+            // Status połączenia i przyciski
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: WhiteContainer(
@@ -97,37 +98,63 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          if (isConnected) {
-                            setState(() {
-                              isConnected = false;
-                              connectedDevice = null;
-                            });
-                          } else {
-                            final selectedDevice = await Navigator.pushNamed(context, '/bluetooth');
-                            if (selectedDevice != null && selectedDevice is BluetoothDevice) {
-                              setState(() {
-                                isConnected = true;
-                                connectedDevice = selectedDevice;
-                              });
-                            }
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: isConnected ? Colors.red : Colors.green,
-                          padding: const EdgeInsets.symmetric(vertical: 16.0),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20.0),
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 8,
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              if (isTestMode) {
+                                _exitTestMode();
+                              } else if (isConnected) {
+                                setState(() {
+                                  isConnected = false;
+                                  connectedDevice = null;
+                                });
+                              } else {
+                                final selectedDevice = await Navigator.pushNamed(context, '/bluetooth');
+                                if (selectedDevice != null && selectedDevice is BluetoothDevice) {
+                                  setState(() {
+                                    isConnected = true;
+                                    connectedDevice = selectedDevice;
+                                  });
+                                }
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: (isConnected || isTestMode) ? Colors.red : Colors.green,
+                              padding: const EdgeInsets.symmetric(vertical: 16.0),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20.0),
+                              ),
+                            ),
+                            child: Text(
+                              isTestMode ? 'Zakończ demo' : (isConnected ? 'Rozłącz' : 'Połącz'),
+                              style: const TextStyle(color: Colors.black),
+                            ),
                           ),
                         ),
-                        child: Text(
-                          isConnected ? 'Rozłącz' : 'Połącz',
-                          style: const TextStyle(color: Colors.black),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              _showTestModeDialog(context);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color.fromARGB(255, 171, 180, 43),
+                              padding: const EdgeInsets.symmetric(vertical: 16.0),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20.0),
+                              ),
+                            ),
+                            child: const Text(
+                              'Demo',
+                              style: TextStyle(color: Colors.black),
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   ],
                 ),
@@ -137,5 +164,51 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+  }
+
+  // Funkcja do wyświetlenia dialogu dla trybu testowego
+  void _showTestModeDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Tryb Testowy'),
+          content: const Text(
+            'Przejście do trybu testowego rozpocznie symulację wszystkich czujników. Czy chcesz przejść w tryb testowy?',
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Zamknięcie dialogu
+              },
+              child: const Text('Anuluj'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Zamknięcie dialogu
+                _enterTestMode(); // Wejście w tryb testowy
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Funkcja do wejścia w tryb testowy
+  void _enterTestMode() {
+    setState(() {
+      isTestMode = true;
+      debugPrint('Tryb testowy włączony.');
+    });
+  }
+
+  // Funkcja do zakończenia trybu testowego
+  void _exitTestMode() {
+    setState(() {
+      isTestMode = false;
+      debugPrint('Tryb testowy zakończony.');
+    });
   }
 }
