@@ -3,6 +3,7 @@ import 'app_bar_custom.dart';
 import 'white_container.dart';
 import 'summary_card_widget.dart';
 import 'custom_date_picker.dart';
+import 'package:car_module/database_helper.dart';
 
 class SummaryOverviewScreen extends StatefulWidget {
   const SummaryOverviewScreen({super.key});
@@ -14,11 +15,55 @@ class SummaryOverviewScreen extends StatefulWidget {
 class _SummaryOverviewScreenState extends State<SummaryOverviewScreen> {
   String _selectedPeriod = 'Dzisiaj';
   Color _cardColor = const Color.fromARGB(255, 60, 172, 94);
+  Map<String, String> _summaryData = {
+    'Średnie spalanie': 'Ładowanie...',
+    'Średnia temperatura': 'Ładowanie...',
+    'Średnia prędkość': 'Ładowanie...',
+  };
 
-  void _updateSummary(String period, Color color) {
+  @override
+  void initState() {
+    super.initState();
+    _updateSummary('Dzisiaj', Colors.green);
+  }
+
+  Future<void> _updateSummary(String period, Color color) async {
     setState(() {
       _selectedPeriod = period;
       _cardColor = color;
+    });
+
+    String dbPeriod;
+    switch (period) {
+      case 'Dzisiaj':
+        dbPeriod = 'today';
+        break;
+      case 'Ostatni tydzień':
+        dbPeriod = 'week';
+        break;
+      case 'Ostatni miesiąc':
+        dbPeriod = 'month';
+        break;
+      default:
+        dbPeriod = 'today';
+    }
+
+    final dbHelper = DatabaseHelper.instance;
+    final averageData = await dbHelper.getAverageLiveData(dbPeriod);
+    print('Dane pobrane z bazy: $averageData');
+
+    setState(() {
+      _summaryData = {
+        'Średnie spalanie': averageData['avg_fuel'] != null
+            ? '${averageData['avg_fuel']!.toStringAsFixed(2)} L/100km'
+            : 'Brak danych',
+        'Średnia temperatura': averageData['avg_temperature'] != null
+            ? '${averageData['avg_temperature']!.toStringAsFixed(1)} °C'
+            : 'Brak danych',
+        'Średnia prędkość': averageData['avg_speed'] != null
+            ? '${averageData['avg_speed']!.toStringAsFixed(1)} km/h'
+            : 'Brak danych',
+      };
     });
   }
 
@@ -30,6 +75,11 @@ class _SummaryOverviewScreenState extends State<SummaryOverviewScreen> {
           setState(() {
             _selectedPeriod = '${startDate.day}/${startDate.month}/${startDate.year} - ${endDate.day}/${endDate.month}/${endDate.year}';
             _cardColor = const Color.fromARGB(255, 255, 105, 180); // Różowy kolor karty
+            _summaryData = {
+              'Średnie spalanie': 'Brak danych',
+              'Średnia temperatura': 'Brak danych',
+              'Średnia prędkość': 'Brak danych',
+            };
           });
         },
       ),
@@ -98,17 +148,17 @@ class _SummaryOverviewScreenState extends State<SummaryOverviewScreen> {
                 data: [
                   {
                     'label': 'Średnie spalanie',
-                    'value': '14L/100km',
+                    'value': _summaryData['Średnie spalanie']!,
                     'icon': Icons.local_gas_station,
                   },
                   {
                     'label': 'Średnia temperatura',
-                    'value': '60°C',
+                    'value': _summaryData['Średnia temperatura']!,
                     'icon': Icons.thermostat,
                   },
                   {
                     'label': 'Średnia prędkość',
-                    'value': '55 km/h',
+                    'value': _summaryData['Średnia prędkość']!,
                     'icon': Icons.speed,
                   },
                 ],

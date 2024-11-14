@@ -22,8 +22,9 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2, // Zwiększona wersja bazy danych
       onCreate: _createDB,
+      onUpgrade: _upgradeDB,
     );
   }
 
@@ -56,9 +57,85 @@ class DatabaseHelper {
         FOREIGN KEY (reading_id) REFERENCES readings_log (id)
       )
     ''');
+
+    // Tworzymy tabelę do przechowywania danych na żywo (spalanie, temperatura, prędkość)
+    await db.execute('''
+      CREATE TABLE live_data (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp TEXT NOT NULL,
+        fuel_consumption REAL,
+        temperature REAL,
+        speed REAL
+      )
+    ''');
   }
 
-  // Definicja metody getAllErrorCodes()
+  Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('''
+        CREATE TABLE live_data (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          timestamp TEXT NOT NULL,
+          fuel_consumption REAL,
+          temperature REAL,
+          speed REAL
+        )
+      ''');
+    }
+  }
+
+  // Metoda do dodawania nowych odczytów danych na żywo
+  Future<void> insertLiveDataLog({
+    double? fuelConsumption,
+    double? temperature,
+    double? speed,
+  }) async {
+    final db = await instance.database;
+    await db.insert('live_data', {
+      'timestamp': DateTime.now().toIso8601String(),
+      'fuel_consumption': fuelConsumption ?? 0.0,
+      'temperature': temperature ?? 0.0,
+      'speed': speed ?? 0.0,
+    });
+    print('dane na żywo zostały dodane do bazy');
+  }
+
+  // Metoda do obliczania średnich wartości danych na żywo
+  Future<Map<String, double>> getAverageLiveData(String period) async {
+    final db = await instance.database;
+
+    // Ustal zakres czasu na podstawie przekazanego okresu
+    String startDate;
+    if (period == 'today') {
+      startDate = DateTime.now().toIso8601String().substring(0, 10);
+    } else if (period == 'week') {
+      startDate = DateTime.now().subtract(Duration(days: 7)).toIso8601String();
+    } else if (period == 'month') {
+      startDate = DateTime.now().subtract(Duration(days: 30)).toIso8601String();
+    } else {
+      throw ArgumentError('Unsupported period: $period');
+    }
+
+    // Pobierz dane z tabeli live_data
+    final result = await db.rawQuery('''
+      SELECT AVG(fuel_consumption) AS avg_fuel, 
+             AVG(temperature) AS avg_temperature, 
+             AVG(speed) AS avg_speed
+      FROM live_data
+      WHERE timestamp >= ?
+    ''', [startDate]);
+
+    if (result.isNotEmpty) {
+      return {
+        'avg_fuel': (result[0]['avg_fuel'] ?? 0.0) as double,
+        'avg_temperature': (result[0]['avg_temperature'] ?? 0.0) as double,
+        'avg_speed': (result[0]['avg_speed'] ?? 0.0) as double,
+      };
+    } else {
+      return {'avg_fuel': 0.0, 'avg_temperature': 0.0, 'avg_speed': 0.0};
+    }
+  }
+
   Future<List<ErrorCode>> getAllErrorCodes() async {
     final db = await instance.database;
     final result = await db.query('error_codes');
@@ -93,40 +170,30 @@ class DatabaseHelper {
   }
 
   Future<List<Map<String, dynamic>>> getAllReadingsWithErrors() async {
-  final db = await instance.database;
+    final db = await instance.database;
 
-  // Pobieranie wszystkich odczytów z błędami
-  final readings = await db.query('readings_log');
-  List<Map<String, dynamic>> result = [];
+    // Pobieranie wszystkich odczytów z błędami
+    final readings = await db.query('readings_log');
+    List<Map<String, dynamic>> result = [];
 
-  for (var reading in readings) {
-    final errors = await db.query(
-      'reading_errors',
-      where: 'reading_id = ?',
-      whereArgs: [reading['id']],
-    );
+    for (var reading in readings) {
+      final errors = await db.query(
+        'reading_errors',
+        where: 'reading_id = ?',
+        whereArgs: [reading['id']],
+      );
 
-    // Przekształć szczegóły błędów do odpowiedniego formatu
-    List<Map<String, String>> errorDetails = errors.map((error) {
-      return {
-        'code': error['code'] as String,
-        'description': error['description'] as String,
-      };
-    }).toList();
+      result.add({
+        'id': reading['id'],
+        'date': reading['date'],
+        'time': reading['time'],
+        'errorCount': reading['error_count'],
+        'errors': errors,
+      });
+    }
 
-    result.add({
-      'id': reading['id'],
-      'date': reading['date'],
-      'time': reading['time'],
-      'errorCount': reading['error_count'],
-      'errors': errorDetails,
-    });
+    return result;
   }
-
-  return result;
-}
-
-
 
   Future<void> close() async {
     final db = await instance.database;

@@ -3,6 +3,8 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'feature_card.dart';
 import 'app_bar_custom.dart';
 import 'white_container.dart';
+import 'dart:async';
+import 'dart:math';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,6 +17,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool isConnected = false;
   bool isTestMode = false;
   BluetoothDevice? connectedDevice;
+  Timer? _backgroundDataTimer;
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +53,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       label: 'Odczyt błędów',
                       color: const Color.fromARGB(255, 174, 159, 44),
                       onTap: () {
-                        Navigator.pushNamed(context, '/error');
+                        _navigateOrShowWarning(context, '/error');
                       },
                     ),
                     FeatureCard(
@@ -58,7 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       label: 'Dane na żywo',
                       color: Colors.purple,
                       onTap: () {
-                        Navigator.pushNamed(context, '/data_home');
+                        _navigateOrShowWarning(context, '/data_home');
                       },
                     ),
                     FeatureCard(
@@ -166,6 +169,36 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // Funkcja do nawigacji lub wyświetlenia ostrzeżenia
+  void _navigateOrShowWarning(BuildContext context, String route) {
+    if ((isTestMode || isConnected) || route == '/history_home') {
+      Navigator.pushNamed(context, route);
+    } else {
+      _showNoConnectionDialog(context);
+    }
+  }
+
+  // Funkcja do wyświetlenia dialogu "Brak połączenia"
+  void _showNoConnectionDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Brak połączenia z modułem OBD'),
+          content: const Text('Włącz tryb testowy lub połącz z modułem OBD, aby uzyskać dostęp do tej funkcji.'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Zamknięcie dialogu
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   // Funkcja do wyświetlenia dialogu dla trybu testowego
   void _showTestModeDialog(BuildContext context) {
     showDialog(
@@ -202,6 +235,7 @@ class _HomeScreenState extends State<HomeScreen> {
       isTestMode = true;
       debugPrint('Tryb testowy włączony.');
     });
+    _startCollectingDataForAllScreens();
   }
 
   // Funkcja do zakończenia trybu testowego
@@ -209,6 +243,20 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       isTestMode = false;
       debugPrint('Tryb testowy zakończony.');
+    });
+    _backgroundDataTimer?.cancel();
+  }
+
+  // Funkcja do uruchomienia symulacji danych dla wszystkich ekranów w tle
+  void _startCollectingDataForAllScreens() {
+    _backgroundDataTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      // Symulujemy wartość danych dla ekranów
+      double simulatedSpeed = Random().nextDouble() * 240; // Prędkość od 0 do 240 km/h
+      double simulatedTemperature = Random().nextDouble() * 160; // Temperatura od 0 do 160°C
+      double simulatedFuelConsumption = Random().nextDouble() * 20; // Spalanie od 0 do 20 L/100km
+
+      // Tutaj można zapisać dane do bazy lub innej logiki
+      debugPrint('Speed: $simulatedSpeed km/h, Temperature: $simulatedTemperature °C, Fuel: $simulatedFuelConsumption L/100km');
     });
   }
 }
