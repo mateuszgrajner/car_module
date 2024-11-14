@@ -1,7 +1,7 @@
+import 'dart:async';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'dart:async';
-import 'dart:math';
+import 'package:car_module/live_data_service.dart';
 import 'app_bar_custom.dart';
 import 'white_container.dart';
 
@@ -10,6 +10,7 @@ class ChartWidget extends StatefulWidget {
   final Color lineColor;
   final double maxY;
   final String yAxisLabel;
+  final Stream<double> dataStream; // Dodane: strumień danych do wykresu
 
   const ChartWidget({
     super.key,
@@ -17,6 +18,7 @@ class ChartWidget extends StatefulWidget {
     required this.lineColor,
     required this.maxY,
     required this.yAxisLabel,
+    required this.dataStream, // Dodane: strumień danych do wykresu
   });
 
   @override
@@ -32,26 +34,25 @@ class _ChartWidgetState extends State<ChartWidget> {
     FlSpot(20, 9),
   ];
 
-  Timer? _timer;
   double _time = 20;
+  late StreamSubscription<double> _dataSubscription;
 
   @override
   void initState() {
     super.initState();
-    _startSimulation();
+    _startListeningToData();
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _dataSubscription.cancel();
     super.dispose();
   }
 
-  void _startSimulation() {
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+  void _startListeningToData() {
+    _dataSubscription = widget.dataStream.listen((newValue) {
       setState(() {
         _time += 1;
-        double newValue = (5 + Random().nextInt(widget.maxY.toInt() - 5)).toDouble();
         chartData.add(FlSpot(_time, newValue));
 
         if (chartData.length > 20) {

@@ -3,8 +3,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'feature_card.dart';
 import 'app_bar_custom.dart';
 import 'white_container.dart';
-import 'dart:async';
-import 'dart:math';
+import 'live_data_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,7 +16,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool isConnected = false;
   bool isTestMode = false;
   BluetoothDevice? connectedDevice;
-  Timer? _backgroundDataTimer;
+  final LiveDataService _liveDataService = LiveDataService(); // Dodanie LiveDataService
 
   @override
   Widget build(BuildContext context) {
@@ -28,8 +27,8 @@ class _HomeScreenState extends State<HomeScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color.fromARGB(255, 28, 26, 31), // Jasny szary
-              Color.fromARGB(255, 49, 49, 49), // Ciemny szary
+              Color.fromARGB(255, 28, 26, 31),
+              Color.fromARGB(255, 49, 49, 49),
             ],
           ),
         ),
@@ -41,19 +40,19 @@ class _HomeScreenState extends State<HomeScreen> {
             // Grid z przyciskami opcji
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32.0), // Przesunięcie kart od krawędzi ekranu
+                padding: const EdgeInsets.symmetric(horizontal: 32.0),
                 child: GridView.extent(
-                  maxCrossAxisExtent: 180.0, // Określenie maksymalnej szerokości dla kart
+                  maxCrossAxisExtent: 180.0,
                   mainAxisSpacing: 16.0,
                   crossAxisSpacing: 16.0,
-                  childAspectRatio: 0.75, // Zwiększenie wysokości kart
+                  childAspectRatio: 0.75,
                   children: [
                     FeatureCard(
                       icon: Icons.error_outline,
                       label: 'Odczyt błędów',
                       color: const Color.fromARGB(255, 174, 159, 44),
                       onTap: () {
-                        _navigateOrShowWarning(context, '/error');
+                        _navigateOrShowWarning(context, '/error', isTestMode: isTestMode);
                       },
                     ),
                     FeatureCard(
@@ -61,7 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       label: 'Dane na żywo',
                       color: Colors.purple,
                       onTap: () {
-                        _navigateOrShowWarning(context, '/data_home');
+                        _navigateOrShowWarning(context, '/data_home', isTestMode: isTestMode);
                       },
                     ),
                     FeatureCard(
@@ -96,7 +95,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           : 'Połączenie: brak połączenia',
                       style: const TextStyle(
                         fontSize: 16.0,
-                        color: Color.fromARGB(255, 0, 0, 0), // Jasny tekst dla ciemnego tła
+                        color: Color.fromARGB(255, 0, 0, 0),
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -170,9 +169,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // Funkcja do nawigacji lub wyświetlenia ostrzeżenia
-  void _navigateOrShowWarning(BuildContext context, String route) {
+  void _navigateOrShowWarning(BuildContext context, String route, {required bool isTestMode}) {
     if ((isTestMode || isConnected) || route == '/history_home') {
-      Navigator.pushNamed(context, route);
+      Navigator.pushNamed(context, route, arguments: isTestMode);
     } else {
       _showNoConnectionDialog(context);
     }
@@ -189,7 +188,7 @@ class _HomeScreenState extends State<HomeScreen> {
           actions: <Widget>[
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); // Zamknięcie dialogu
+                Navigator.of(context).pop();
               },
               child: const Text('OK'),
             ),
@@ -212,14 +211,14 @@ class _HomeScreenState extends State<HomeScreen> {
           actions: <Widget>[
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); // Zamknięcie dialogu
+                Navigator.of(context).pop();
               },
               child: const Text('Anuluj'),
             ),
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); // Zamknięcie dialogu
-                _enterTestMode(); // Wejście w tryb testowy
+                Navigator.of(context).pop();
+                _enterTestMode();
               },
               child: const Text('OK'),
             ),
@@ -235,7 +234,7 @@ class _HomeScreenState extends State<HomeScreen> {
       isTestMode = true;
       debugPrint('Tryb testowy włączony.');
     });
-    _startCollectingDataForAllScreens();
+    _liveDataService.startDataCollection(); // Rozpocznij symulację danych
   }
 
   // Funkcja do zakończenia trybu testowego
@@ -244,19 +243,12 @@ class _HomeScreenState extends State<HomeScreen> {
       isTestMode = false;
       debugPrint('Tryb testowy zakończony.');
     });
-    _backgroundDataTimer?.cancel();
+    _liveDataService.stopDataCollection(); // Zakończ symulację danych
   }
 
-  // Funkcja do uruchomienia symulacji danych dla wszystkich ekranów w tle
-  void _startCollectingDataForAllScreens() {
-    _backgroundDataTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      // Symulujemy wartość danych dla ekranów
-      double simulatedSpeed = Random().nextDouble() * 240; // Prędkość od 0 do 240 km/h
-      double simulatedTemperature = Random().nextDouble() * 160; // Temperatura od 0 do 160°C
-      double simulatedFuelConsumption = Random().nextDouble() * 20; // Spalanie od 0 do 20 L/100km
-
-      // Tutaj można zapisać dane do bazy lub innej logiki
-      debugPrint('Speed: $simulatedSpeed km/h, Temperature: $simulatedTemperature °C, Fuel: $simulatedFuelConsumption L/100km');
-    });
+  @override
+  void dispose() {
+    _liveDataService.dispose();
+    super.dispose();
   }
 }

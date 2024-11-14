@@ -4,7 +4,7 @@ import 'package:car_module/history_home_screen.dart';
 import 'package:car_module/settings_home_screen.dart';
 import 'package:car_module/speed_screen.dart';
 import 'package:car_module/summary_overviev_screen.dart';
-import 'package:car_module/bluetooth_connection_screen.dart'; 
+import 'package:car_module/bluetooth_connection_screen.dart';
 import 'readings_history_screen.dart';
 import 'data_home_screen.dart';
 import 'engine_rpm_screen.dart';
@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import 'error_home_screen.dart';
 import 'package:car_module/error_code_model.dart';
+import 'package:car_module/live_data_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // Aby mieć pewność, że wszystko jest zainicjalizowane
@@ -25,6 +26,9 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final liveDataService = LiveDataService(); // Stworzenie instancji LiveDataService
+    liveDataService.startDataCollection(); // Rozpoczęcie zbierania danych
+
     return MaterialApp(
       title: 'Car Module App',
       theme: ThemeData(
@@ -35,15 +39,15 @@ class MyApp extends StatelessWidget {
         '/': (context) => const HomeScreen(),
         '/error': (context) => const ErrorHomeScreen(color: Color.fromARGB(255, 174, 159, 44)),
         '/data_home': (context) => const LiveDataScreen(color: Color.fromARGB(255, 153, 45, 163)),
-        '/rpm_screen': (context) => const EngineRpmScreen(),
-        '/temp_screen': (context) => const EngineTempScreen(),
-        '/speed_screen': (context) => const VehicleSpeedScreen(),
-        '/fuel_screen': (context) => const FuelConsumptionScreen(),
+        '/rpm_screen': (context) => EngineRpmScreen(liveDataService: liveDataService), // Dodanie LiveDataService
+        '/temp_screen': (context) => EngineTempScreen(liveDataService: liveDataService), // Dodanie LiveDataService
+        '/speed_screen': (context) => VehicleSpeedScreen(liveDataService: liveDataService), // Dodanie LiveDataService
+        '/fuel_screen': (context) => FuelConsumptionScreen(liveDataService: liveDataService), // Dodanie LiveDataService
         '/history_home': (context) => const ReadingsHistoryScreen(),
         '/readings_screen': (context) => const ReadingsLogScreen(),
         '/summary_screen': (context) => const SummaryOverviewScreen(),
         '/settings_screen': (context) => const SettingsScreen(),
-        '/bluetooth': (context) => const BluetoothConnectionScreen(), 
+        '/bluetooth': (context) => const BluetoothConnectionScreen(),
       },
       debugShowCheckedModeBanner: false,
     );

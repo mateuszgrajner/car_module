@@ -1,16 +1,23 @@
 import 'package:flutter/material.dart';
 import 'chart_widget.dart';
+import 'live_data_service.dart';
 
 class EngineRpmScreen extends StatelessWidget {
-  const EngineRpmScreen({super.key});
+  final LiveDataService liveDataService;
+
+  const EngineRpmScreen({
+    super.key,
+    required this.liveDataService,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return const ChartWidget(
+    return ChartWidget(
       title: 'Obroty Silnika',
-      lineColor: Color.fromARGB(255, 81, 184, 120),
+      lineColor: const Color.fromARGB(255, 81, 184, 120),
       maxY: 10000,
       yAxisLabel: 'RPM',
+      dataStream: liveDataService.rpmStream, // Przekazujemy strumień danych
     );
   }
 }
