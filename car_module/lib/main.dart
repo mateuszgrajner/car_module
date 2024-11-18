@@ -5,6 +5,7 @@ import 'package:car_module/settings_home_screen.dart';
 import 'package:car_module/speed_screen.dart';
 import 'package:car_module/summary_overviev_screen.dart';
 import 'package:car_module/bluetooth_connection_screen.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'readings_history_screen.dart';
 import 'data_home_screen.dart';
 import 'engine_rpm_screen.dart';
@@ -26,8 +27,8 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final liveDataService = LiveDataService(); // Stworzenie instancji LiveDataService
-    liveDataService.startDataCollection(); // Rozpoczęcie zbierania danych
+    final liveDataService = LiveDataService();// Stworzenie instancji LiveDataService
+   
 
     return MaterialApp(
       title: 'Car Module App',

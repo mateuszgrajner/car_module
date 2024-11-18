@@ -3,7 +3,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'feature_card.dart';
 import 'app_bar_custom.dart';
 import 'white_container.dart';
-import 'live_data_service.dart';
+import 'home_controller.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -13,10 +13,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  bool isConnected = false;
-  bool isTestMode = false;
-  BluetoothDevice? connectedDevice;
-  final LiveDataService _liveDataService = LiveDataService(); // Dodanie LiveDataService
+  final HomeController _controller = HomeController();
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       label: 'Odczyt błędów',
                       color: const Color.fromARGB(255, 174, 159, 44),
                       onTap: () {
-                        _navigateOrShowWarning(context, '/error', isTestMode: isTestMode);
+                        _navigateOrShowWarning(context, '/error');
                       },
                     ),
                     FeatureCard(
@@ -60,7 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       label: 'Dane na żywo',
                       color: Colors.purple,
                       onTap: () {
-                        _navigateOrShowWarning(context, '/data_home', isTestMode: isTestMode);
+                        _navigateOrShowWarning(context, '/data_home');
                       },
                     ),
                     FeatureCard(
@@ -90,8 +87,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   children: [
                     Text(
-                      isConnected
-                          ? 'Połączenie: połączono z ${connectedDevice?.name ?? 'Nieznane urządzenie'}'
+                      _controller.isConnected
+                          ? 'Połączenie: połączono z ${_controller.connectedDevice?.name ?? 'Nieznane urządzenie'}'
                           : 'Połączenie: brak połączenia',
                       style: const TextStyle(
                         fontSize: 16.0,
@@ -106,32 +103,27 @@ class _HomeScreenState extends State<HomeScreen> {
                           flex: 8,
                           child: ElevatedButton(
                             onPressed: () async {
-                              if (isTestMode) {
-                                _exitTestMode();
-                              } else if (isConnected) {
-                                setState(() {
-                                  isConnected = false;
-                                  connectedDevice = null;
-                                });
+                              if (_controller.isTestMode) {
+                                _controller.exitTestMode();
+                              } else if (_controller.isConnected) {
+                                _controller.disconnectDevice();
                               } else {
                                 final selectedDevice = await Navigator.pushNamed(context, '/bluetooth');
                                 if (selectedDevice != null && selectedDevice is BluetoothDevice) {
-                                  setState(() {
-                                    isConnected = true;
-                                    connectedDevice = selectedDevice;
-                                  });
+                                  _controller.connectToDevice(selectedDevice);
                                 }
                               }
+                              setState(() {}); // Odświeżenie UI po zmianie stanu
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: (isConnected || isTestMode) ? Colors.red : Colors.green,
+                              backgroundColor: (_controller.isConnected || _controller.isTestMode) ? Colors.red : Colors.green,
                               padding: const EdgeInsets.symmetric(vertical: 16.0),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(20.0),
                               ),
                             ),
                             child: Text(
-                              isTestMode ? 'Zakończ demo' : (isConnected ? 'Rozłącz' : 'Połącz'),
+                              _controller.isTestMode ? 'Zakończ demo' : (_controller.isConnected ? 'Rozłącz' : 'Połącz'),
                               style: const TextStyle(color: Colors.black),
                             ),
                           ),
@@ -169,9 +161,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // Funkcja do nawigacji lub wyświetlenia ostrzeżenia
-  void _navigateOrShowWarning(BuildContext context, String route, {required bool isTestMode}) {
-    if ((isTestMode || isConnected) || route == '/history_home') {
-      Navigator.pushNamed(context, route, arguments: isTestMode);
+  void _navigateOrShowWarning(BuildContext context, String route) {
+    if ((_controller.isTestMode || _controller.isConnected) || route == '/history_home') {
+      Navigator.pushNamed(context, route, arguments: _controller.isTestMode);
     } else {
       _showNoConnectionDialog(context);
     }
@@ -200,55 +192,40 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Funkcja do wyświetlenia dialogu dla trybu testowego
   void _showTestModeDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Tryb Testowy'),
-          content: const Text(
-            'Przejście do trybu testowego rozpocznie symulację wszystkich czujników. Czy chcesz przejść w tryb testowy?',
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: const Text('Tryb Testowy'),
+        content: const Text(
+          'Przejście do trybu testowego rozpocznie symulację wszystkich czujników. Czy chcesz przejść w tryb testowy?',
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: const Text('Anuluj'),
           ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Anuluj'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _enterTestMode();
-              },
-              child: const Text('OK'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  // Funkcja do wejścia w tryb testowy
-  void _enterTestMode() {
-    setState(() {
-      isTestMode = true;
-      debugPrint('Tryb testowy włączony.');
-    });
-    _liveDataService.startDataCollection(); // Rozpocznij symulację danych
-  }
-
-  // Funkcja do zakończenia trybu testowego
-  void _exitTestMode() {
-    setState(() {
-      isTestMode = false;
-      debugPrint('Tryb testowy zakończony.');
-    });
-    _liveDataService.stopDataCollection(); // Zakończ symulację danych
-  }
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              setState(() {
+                _controller.enterTestMode();
+              });
+            },
+            child: const Text('OK'),
+          ),
+        ],
+      );
+    },
+  );
+}
 
   @override
   void dispose() {
-    _liveDataService.dispose();
+    print('Zamykanie ekranu HomeScreen...');
+    _controller.dispose();
     super.dispose();
   }
 }

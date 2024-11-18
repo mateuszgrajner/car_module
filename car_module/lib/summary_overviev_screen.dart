@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'app_bar_custom.dart';
 import 'white_container.dart';
@@ -21,10 +22,25 @@ class _SummaryOverviewScreenState extends State<SummaryOverviewScreen> {
     'Średnia prędkość': 'Ładowanie...',
   };
 
+  Timer? _refreshTimer;
+
   @override
   void initState() {
     super.initState();
-    _updateSummary('Dzisiaj', Colors.green);
+    _updateSummary(_selectedPeriod, _cardColor);
+    _startAutoRefresh();
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startAutoRefresh() {
+    _refreshTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+      _updateSummary(_selectedPeriod, _cardColor);
+    });
   }
 
   Future<void> _updateSummary(String period, Color color) async {
@@ -73,7 +89,8 @@ class _SummaryOverviewScreenState extends State<SummaryOverviewScreen> {
       builder: (context) => CustomDatePickerDialog(
         onDateSelected: (startDate, endDate) {
           setState(() {
-            _selectedPeriod = '${startDate.day}/${startDate.month}/${startDate.year} - ${endDate.day}/${endDate.month}/${endDate.year}';
+            _selectedPeriod =
+                '${startDate.day}/${startDate.month}/${startDate.year} - ${endDate.day}/${endDate.month}/${endDate.year}';
             _cardColor = const Color.fromARGB(255, 255, 105, 180); // Różowy kolor karty
             _summaryData = {
               'Średnie spalanie': 'Brak danych',

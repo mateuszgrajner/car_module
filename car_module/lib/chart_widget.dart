@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:car_module/live_data_service.dart';
 import 'app_bar_custom.dart';
 import 'white_container.dart';
 
@@ -10,7 +9,7 @@ class ChartWidget extends StatefulWidget {
   final Color lineColor;
   final double maxY;
   final String yAxisLabel;
-  final Stream<double> dataStream; // Dodane: strumień danych do wykresu
+  final Stream<double> dataStream;
 
   const ChartWidget({
     super.key,
@@ -18,7 +17,7 @@ class ChartWidget extends StatefulWidget {
     required this.lineColor,
     required this.maxY,
     required this.yAxisLabel,
-    required this.dataStream, // Dodane: strumień danych do wykresu
+    required this.dataStream,
   });
 
   @override
@@ -26,16 +25,9 @@ class ChartWidget extends StatefulWidget {
 }
 
 class _ChartWidgetState extends State<ChartWidget> {
-  List<FlSpot> chartData = [
-    FlSpot(0, 5),
-    FlSpot(5, 7),
-    FlSpot(10, 6),
-    FlSpot(15, 8),
-    FlSpot(20, 9),
-  ];
-
-  double _time = 20;
-  late StreamSubscription<double> _dataSubscription;
+  List<FlSpot> chartData = [];
+  double _time = 0;
+  StreamSubscription<double>? _dataSubscription;
 
   @override
   void initState() {
@@ -45,7 +37,7 @@ class _ChartWidgetState extends State<ChartWidget> {
 
   @override
   void dispose() {
-    _dataSubscription.cancel();
+    _dataSubscription?.cancel();
     super.dispose();
   }
 
@@ -81,7 +73,6 @@ class _ChartWidgetState extends State<ChartWidget> {
           children: [
             AppBarCustom(title: widget.title),
             const SizedBox(height: 16.0),
-            // Wykres danych
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -143,7 +134,7 @@ class _ChartWidgetState extends State<ChartWidget> {
                         color: Colors.white,
                       ),
                     ),
-                    minX: _time - 20,
+                    minX: (_time - 20) > 0 ? _time - 20 : 0,
                     maxX: _time,
                     minY: 0,
                     maxY: widget.maxY,
@@ -167,7 +158,6 @@ class _ChartWidgetState extends State<ChartWidget> {
               ),
             ),
             const SizedBox(height: 16.0),
-            // Przycisk powrotu
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: WhiteContainer(
@@ -178,15 +168,9 @@ class _ChartWidgetState extends State<ChartWidget> {
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 150.0,
-                        vertical: 16.0,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 150.0, vertical: 16.0),
                     ),
-                    child: const Text(
-                      'Powrót',
-                      style: TextStyle(color: Colors.black),
-                    ),
+                    child: const Text('Powrót', style: TextStyle(color: Colors.black)),
                   ),
                 ),
               ),

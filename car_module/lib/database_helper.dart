@@ -22,7 +22,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2, // Zwiększona wersja bazy danych
+      version: 3, // Zwiększona wersja bazy danych
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -68,6 +68,17 @@ class DatabaseHelper {
         speed REAL
       )
     ''');
+
+    // Tworzymy tabelę do przechowywania logów połączeń OBD
+    await db.execute('''
+      CREATE TABLE connection_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        start_time TEXT NOT NULL,
+        end_time TEXT,
+        status TEXT NOT NULL,
+        error_message TEXT
+      )
+    ''');
   }
 
   Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
@@ -79,6 +90,18 @@ class DatabaseHelper {
           fuel_consumption REAL,
           temperature REAL,
           speed REAL
+        )
+      '''
+      );
+    }
+    if (oldVersion < 3) {
+      await db.execute('''
+        CREATE TABLE connection_logs (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          start_time TEXT NOT NULL,
+          end_time TEXT,
+          status TEXT NOT NULL,
+          error_message TEXT
         )
       ''');
     }
@@ -97,7 +120,7 @@ class DatabaseHelper {
       'temperature': temperature ?? 0.0,
       'speed': speed ?? 0.0,
     });
-    print('dane na żywo zostały dodane do bazy');
+    print('Dane na żywo zostały dodane do bazy');
   }
 
   // Metoda do obliczania średnich wartości danych na żywo
@@ -193,6 +216,26 @@ class DatabaseHelper {
     }
 
     return result;
+  }
+
+  // Metoda do rejestrowania logów połączeń OBD
+  Future<void> insertConnectionLog({required String startTime, String? endTime, required String status, String? errorMessage}) async {
+    final db = await instance.database;
+    await db.insert('connection_logs', {
+      'start_time': startTime,
+      'end_time': endTime,
+      'status': status,
+      'error_message': errorMessage,
+    });
+  }
+
+  Future<void> updateConnectionLog(int id, {String? endTime, String? status, String? errorMessage}) async {
+    final db = await instance.database;
+    await db.update('connection_logs', {
+      if (endTime != null) 'end_time': endTime,
+      if (status != null) 'status': status,
+      if (errorMessage != null) 'error_message': errorMessage,
+    }, where: 'id = ?', whereArgs: [id]);
   }
 
   Future<void> close() async {

@@ -1,55 +1,48 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import 'app_bar_custom.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'app_bar_custom.dart';
 
 class BluetoothConnectionScreen extends StatefulWidget {
-  const BluetoothConnectionScreen({Key? key}) : super(key: key);
+  const BluetoothConnectionScreen({super.key});
 
   @override
   _BluetoothConnectionScreenState createState() => _BluetoothConnectionScreenState();
 }
 
 class _BluetoothConnectionScreenState extends State<BluetoothConnectionScreen> {
-  List<BluetoothDevice> _devicesList = [];
+  List<BluetoothDevice> _pairedDevices = [];
   BluetoothDevice? _selectedDevice;
   bool _isConnecting = false;
+
+  // UUID dla SPP (Serial Port Profile)
+  final Guid sppUuid = Guid('00001101-0000-1000-8000-00805F9B34FB');
 
   @override
   void initState() {
     super.initState();
     _requestPermissions();
-    _startScan();
+    _getPairedDevices();
   }
 
+  /// Żądanie wymaganych uprawnień
   void _requestPermissions() async {
-  if (await Permission.bluetooth.isDenied) {
-    await Permission.bluetooth.request();
+    await [
+      Permission.bluetooth,
+      Permission.bluetoothScan,
+      Permission.bluetoothConnect,
+    ].request();
   }
-  if (await Permission.bluetoothScan.isDenied) {
-    await Permission.bluetoothScan.request();
-  }
-  if (await Permission.bluetoothConnect.isDenied) {
-    await Permission.bluetoothConnect.request();
-  }
-  if (await Permission.locationWhenInUse.isDenied) {
-    await Permission.locationWhenInUse.request();
-  }
-}
 
-  void _startScan() {
-    FlutterBluePlus.startScan(timeout: const Duration(seconds: 8));
-
-    // Nasłuchiwanie wyników skanowania
-    FlutterBluePlus.scanResults.listen((results) {
-      setState(() {
-        if (results.isNotEmpty) {
-          _devicesList = results.map((r) => r.device).toList();
-        }
-      });
+  /// Pobieranie sparowanych urządzeń
+  void _getPairedDevices() async {
+    List<BluetoothDevice> devices = await FlutterBluePlus.bondedDevices;
+    setState(() {
+      _pairedDevices = devices;
     });
   }
 
+  /// Funkcja połączenia z urządzeniem
   void _connectToDevice() async {
     if (_selectedDevice != null) {
       setState(() {
@@ -57,35 +50,42 @@ class _BluetoothConnectionScreenState extends State<BluetoothConnectionScreen> {
       });
 
       try {
-        // Próba połączenia z urządzeniem
-        await _selectedDevice!.connect();
+        debugPrint('Próba połączenia z urządzeniem: ${_selectedDevice!.name}');
+
+        // Połączenie z urządzeniem
+        await _selectedDevice!.connect(autoConnect: false);
+        debugPrint('Połączono z urządzeniem: ${_selectedDevice!.name}');
+
+        // Ustawienie MTU na 256
+        await _selectedDevice!.requestMtu(256);
+        debugPrint('MTU ustawione na 256.');
+
         setState(() {
           _isConnecting = false;
         });
 
-        // Wyświetlenie komunikatu o połączeniu
+        // Wyświetlenie komunikatu o sukcesie
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Pomyślnie połączono z urządzeniem: ${_selectedDevice!.remoteId.id}'),
+            content: Text('Pomyślnie połączono z urządzeniem: ${_selectedDevice!.name}'),
             backgroundColor: Colors.green,
           ),
         );
 
-        debugPrint('Connected to ${_selectedDevice!.remoteId}');
-        // Powrót do ekranu głównego z wybranym urządzeniem
+        // Powrót do poprzedniego ekranu z wybranym urządzeniem
         Navigator.pop(context, _selectedDevice);
       } catch (e) {
         setState(() {
           _isConnecting = false;
         });
-        // Wyświetlenie komunikatu na ekranie w przypadku nieudanego połączenia
+        // Obsługa błędu
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Nie udało się połączyć z urządzeniem: $e'),
             backgroundColor: Colors.red,
           ),
         );
-        debugPrint('Nie udało się połączyć z urządzeniem: $e');
+        debugPrint('Błąd podczas połączenia: $e');
       }
     }
   }
@@ -112,6 +112,7 @@ class _BluetoothConnectionScreenState extends State<BluetoothConnectionScreen> {
               backgroundColor: const Color.fromARGB(255, 144, 67, 239),
             ),
             const SizedBox(height: 16.0),
+            // Lista sparowanych urządzeń
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: DropdownButton<BluetoothDevice>(
@@ -121,25 +122,15 @@ class _BluetoothConnectionScreenState extends State<BluetoothConnectionScreen> {
                 ),
                 dropdownColor: Colors.grey[800],
                 value: _selectedDevice,
-                items: _devicesList.isNotEmpty
-                    ? _devicesList.map((device) {
-                        return DropdownMenuItem(
-                          value: device,
-                          child: Text(
-                            device.name.isNotEmpty ? device.name : device.remoteId.id,
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                        );
-                      }).toList()
-                    : [
-                        DropdownMenuItem(
-                          value: null,
-                          child: const Text(
-                            'Brak dostępnych urządzeń',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        ),
-                      ],
+                items: _pairedDevices.map((device) {
+                  return DropdownMenuItem(
+                    value: device,
+                    child: Text(
+                      device.name.isNotEmpty ? device.name : device.remoteId.id,
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  );
+                }).toList(),
                 onChanged: (device) {
                   setState(() {
                     _selectedDevice = device;
@@ -148,6 +139,7 @@ class _BluetoothConnectionScreenState extends State<BluetoothConnectionScreen> {
               ),
             ),
             const SizedBox(height: 16.0),
+            // Przycisk połączenia
             ElevatedButton(
               onPressed: _isConnecting ? null : _connectToDevice,
               style: ElevatedButton.styleFrom(
@@ -164,6 +156,7 @@ class _BluetoothConnectionScreenState extends State<BluetoothConnectionScreen> {
                     ),
             ),
             const Spacer(),
+            // Przycisk powrotu
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: ElevatedButton(
@@ -186,14 +179,14 @@ class _BluetoothConnectionScreenState extends State<BluetoothConnectionScreen> {
           ],
         ),
       ),
+      // Przycisk włączania Bluetooth
       floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 80.0), // Przenieś wyżej, aby nie kolidował z dolnym przyciskiem
+        padding: const EdgeInsets.only(bottom: 80.0),
         child: FloatingActionButton(
           backgroundColor: Colors.deepPurple,
           child: const Icon(Icons.bluetooth),
           onPressed: () async {
             try {
-              // Włączenie Bluetooth
               await FlutterBluePlus.turnOn();
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(

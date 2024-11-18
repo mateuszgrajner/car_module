@@ -1,38 +1,71 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:car_module/database_helper.dart';
 
 class LiveDataService {
-  Timer? _dataCollectionTimer;
+  static final LiveDataService _instance = LiveDataService._internal();
+  factory LiveDataService() => _instance;
 
-  // Użyj strumieni do przekazywania zaktualizowanych danych do widżetów
+  LiveDataService._internal();
+
+  Timer? _dataCollectionTimer;
+  bool _isCollectingData = false;
+
+  // Controllers for the different data streams
   final _speedController = StreamController<double>.broadcast();
   final _temperatureController = StreamController<double>.broadcast();
   final _fuelConsumptionController = StreamController<double>.broadcast();
   final _rpmController = StreamController<double>.broadcast();
 
+  // Stream getters
   Stream<double> get speedStream => _speedController.stream;
   Stream<double> get temperatureStream => _temperatureController.stream;
   Stream<double> get fuelConsumptionStream => _fuelConsumptionController.stream;
   Stream<double> get rpmStream => _rpmController.stream;
 
   void startDataCollection() {
-    _dataCollectionTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      // Generowanie symulowanych wartości
-      double simulatedSpeed = Random().nextDouble() * 240; // Prędkość od 0 do 240 km/h
-      double simulatedTemperature = Random().nextDouble() * 160; // Temperatura od 0 do 160°C
-      double simulatedFuelConsumption = Random().nextDouble() * 50; // Spalanie od 0 do 20 L/100km
-      double simulatedRPM = Random().nextDouble() * 10000; // RPM od 0 do 10,000
+    if (_isCollectingData) {
+      print('Data collection already in progress, skipping.');
+      return;
+    }
 
-      // Przekazywanie danych do strumieni
-      _speedController.add(simulatedSpeed);
-      _temperatureController.add(simulatedTemperature);
-      _fuelConsumptionController.add(simulatedFuelConsumption);
-      _rpmController.add(simulatedRPM);
+    _isCollectingData = true;
+    print('Starting data collection...');
+
+    _dataCollectionTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
+      if (_isCollectingData) {
+        // Generate simulated values
+        double simulatedSpeed = Random().nextDouble() * 240;
+        double simulatedTemperature = Random().nextDouble() * 160;
+        double simulatedFuelConsumption = Random().nextDouble() * 20;
+        double simulatedRPM = Random().nextDouble() * 10000;
+
+        // Push values to the stream controllers
+        _speedController.add(simulatedSpeed);
+        _temperatureController.add(simulatedTemperature);
+        _fuelConsumptionController.add(simulatedFuelConsumption);
+        _rpmController.add(simulatedRPM);
+
+        // Log data to database
+        final dbHelper = DatabaseHelper.instance;
+        await dbHelper.insertLiveDataLog(
+          fuelConsumption: simulatedFuelConsumption,
+          temperature: simulatedTemperature,
+          speed: simulatedSpeed,
+        );
+        print('Data added to database: Speed = $simulatedSpeed, Temp = $simulatedTemperature, Fuel = $simulatedFuelConsumption, RPM = $simulatedRPM');
+      }
     });
   }
 
   void stopDataCollection() {
-    _dataCollectionTimer?.cancel();
+    if (_isCollectingData) {
+      _dataCollectionTimer?.cancel();
+      _isCollectingData = false;
+      print('Data collection stopped.');
+    } else {
+      print('No active data collection to stop.');
+    }
   }
 
   void dispose() {
@@ -40,5 +73,7 @@ class LiveDataService {
     _temperatureController.close();
     _fuelConsumptionController.close();
     _rpmController.close();
+    stopDataCollection();
+    print('LiveDataService disposed.');
   }
 }
