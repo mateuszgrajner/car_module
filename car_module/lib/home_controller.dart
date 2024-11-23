@@ -1,48 +1,73 @@
+import 'package:car_module/demo_obd_connection.dart';
+import 'package:car_module/real_obd_connection.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'live_data_service.dart';
+import 'obd_connection.dart';
 
 class HomeController {
   bool isConnected = false; // Status połączenia Bluetooth
   bool isTestMode = false; // Status trybu testowego
   BluetoothDevice? connectedDevice; // Połączone urządzenie
-  final LiveDataService liveDataService = LiveDataService();
+  final LiveDataService liveDataService = LiveDataService(); // LiveDataService
 
   // Flaga kontrolująca, czy zbieranie danych trwa
   bool isCollectingData = false;
 
   /// Połącz z urządzeniem Bluetooth
-  void connectToDevice(BluetoothDevice device) {
-    if (!isConnected) {
+  Future<void> connectToDevice(BluetoothDevice device) async {
+    if (isConnected) {
+      print('Urządzenie już jest połączone, pomijam ponowne połączenie.');
+      return;
+    }
+
+    print('Próba połączenia z urządzeniem: ${device.name}');
+    try {
+      // Ustawienie rzeczywistego połączenia
+      final realConnection = RealObdConnection(device);
+      await realConnection.connect(); // Upewniamy się, że pełne połączenie zostało nawiązane
+      liveDataService.setObdConnection(realConnection);
       connectedDevice = device;
-      isConnected = true;
+      isConnected = true; // Flaga ustawiana po pełnym sukcesie połączenia
+
       print('Połączono z urządzeniem: ${device.name}');
       startDataCollectionIfNeeded();
-    } else {
-      print('Urządzenie już jest połączone, pomijam ponowne połączenie.');
+    } catch (e) {
+      print('Nie udało się połączyć z urządzeniem: $e');
+      disconnectDevice(); // Rozłącz w przypadku błędu
     }
   }
 
   /// Rozłącz urządzenie Bluetooth
-  void disconnectDevice() {
+  Future<void> disconnectDevice() async {
     if (isConnected) {
       print('Rozłączanie urządzenia Bluetooth...');
-      isConnected = false;
+      await liveDataService.disconnectObdConnection(); // Odłączanie połączenia z OBD
       connectedDevice = null;
+      isConnected = false;
+
       stopDataCollectionIfNeeded();
+      print('Urządzenie rozłączone.');
     } else {
       print('Brak połączonego urządzenia, nie można rozłączyć.');
     }
   }
 
   /// Włącz tryb testowy
-  void enterTestMode() {
-    if (!isTestMode) {
-      print('Włączanie trybu testowego...');
-      isTestMode = true;
-      startDataCollectionIfNeeded();
-    } else {
+  Future<void> enterTestMode() async {
+    if (isTestMode) {
       print('Tryb testowy już jest włączony, pomijam.');
+      return;
     }
+
+    print('Włączanie trybu testowego...');
+    isTestMode = true;
+
+    // Ustaw DemoObdConnection jako aktywne połączenie
+    final demoConnection = DemoObdConnection();
+    await demoConnection.connect(); // Upewniamy się, że DemoObdConnection jest "połączone"
+    liveDataService.setObdConnection(demoConnection);
+
+    startDataCollectionIfNeeded();
   }
 
   /// Wyłącz tryb testowy
@@ -50,6 +75,7 @@ class HomeController {
     if (isTestMode) {
       print('Wyłączanie trybu testowego...');
       isTestMode = false;
+
       stopDataCollectionIfNeeded();
     } else {
       print('Tryb testowy nie jest włączony, pomijam wyłączanie.');
@@ -59,8 +85,7 @@ class HomeController {
   /// Rozpocznij zbieranie danych, jeśli wymagany jest tryb testowy lub połączenie Bluetooth
   void startDataCollectionIfNeeded() {
     if (!isCollectingData && (isTestMode || isConnected)) {
-      print('Uruchamianie timeru i generowanie danych (Tryb testowy lub OBD)');
-      stopDataCollectionIfNeeded();
+      print('Rozpoczynanie zbierania danych (Tryb testowy lub OBD)...');
       liveDataService.startDataCollection();
       isCollectingData = true;
     } else {
