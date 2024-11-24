@@ -1,6 +1,8 @@
 import 'dart:async';
-import 'obd_connection.dart';
+import 'dart:math';
 import 'package:car_module/database_helper.dart';
+import 'package:flutter/material.dart';
+import 'obd_connection.dart';
 
 class LiveDataService {
   static final LiveDataService _instance = LiveDataService._internal();
@@ -27,72 +29,91 @@ class LiveDataService {
 
   /// Ustaw implementację połączenia OBD
   void setObdConnection(ObdConnection connection) {
-    _obdConnection = connection;
-  }
+  _obdConnection = connection;
+  debugPrint('Ustawiono połączenie OBD: $connection');
+}
 
-  /// Rozłącz połączenie OBD
-  Future<void> disconnectObdConnection() async {
-    if (_obdConnection != null) {
-      await _obdConnection!.disconnect();
-      _obdConnection = null;
-    }
-  }
 
+  /// Rozpoczyna zbieranie danych
   void startDataCollection() {
     if (_isCollectingData) {
-      print('Data collection already in progress, skipping.');
+      debugPrint('Zbieranie danych już trwa, pomijam.');
       return;
     }
 
+    if (_obdConnection == null) {
+      throw Exception('Brak ustawionego połączenia OBD.');
+    }
+
     _isCollectingData = true;
-    print('Starting data collection...');
+    debugPrint('Rozpoczynanie zbierania danych...');
 
     _dataCollectionTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
       if (_isCollectingData) {
-        if (_obdConnection == null) {
-          throw Exception('Brak ustawionego połączenia OBD.');
-        }
-
         try {
-          // Pobierz dane z OBD (lub symuluj)
-          final simulatedSpeed = double.parse(await _obdConnection!.sendCommand('GET_SPEED'));
-          final simulatedTemperature = double.parse(await _obdConnection!.sendCommand('GET_TEMP'));
-          final simulatedFuelConsumption = double.parse(await _obdConnection!.sendCommand('GET_FUEL'));
-          final simulatedRPM = double.parse(await _obdConnection!.sendCommand('GET_RPM'));
+          // Pobierz dane z OBD (lub symuluj w trybie demo)
+          final simulatedSpeed = double.tryParse(await _obdConnection!.sendCommand('GET_SPEED')) ?? 0.0;
+          final simulatedTemperature = double.tryParse(await _obdConnection!.sendCommand('GET_TEMP')) ?? 0.0;
+          final simulatedFuelConsumption = double.tryParse(await _obdConnection!.sendCommand('GET_FUEL')) ?? 0.0;
+          final simulatedRPM = double.tryParse(await _obdConnection!.sendCommand('GET_RPM')) ?? 0.0;
 
-          // Przekaż wartości do kontrolerów strumieni
+          // Wysyłanie danych do strumieni
           _speedController.add(simulatedSpeed);
           _temperatureController.add(simulatedTemperature);
           _fuelConsumptionController.add(simulatedFuelConsumption);
           _rpmController.add(simulatedRPM);
 
-          // Zapisz dane do bazy danych
+          // Logowanie danych w bazie
           final dbHelper = DatabaseHelper.instance;
           await dbHelper.insertLiveDataLog(
             fuelConsumption: simulatedFuelConsumption,
             temperature: simulatedTemperature,
             speed: simulatedSpeed,
           );
+          print('Dane zapisane w bazie: Speed = $simulatedSpeed, Temp = $simulatedTemperature, Fuel = $simulatedFuelConsumption, RPM = $simulatedRPM');
         } catch (e) {
           print('Błąd podczas zbierania danych: $e');
+          stopDataCollection(); // Zatrzymanie zbierania danych w przypadku błędu
         }
       }
     });
   }
 
+  /// Zatrzymuje zbieranie danych
   void stopDataCollection() {
     if (_isCollectingData) {
       _dataCollectionTimer?.cancel();
       _isCollectingData = false;
-      print('Data collection stopped.');
+      print('Zbieranie danych zatrzymane.');
+    } else {
+      print('Brak aktywnego zbierania danych do zatrzymania.');
     }
   }
 
+  /// Rozłącza połączenie OBD
+  Future<void> disconnectObdConnection() async {
+    if (_obdConnection != null) {
+      try {
+        await _obdConnection!.disconnect();
+        print('Połączenie OBD zostało rozłączone.');
+      } catch (e) {
+        print('Błąd podczas rozłączania połączenia OBD: $e');
+      } finally {
+        _obdConnection = null; // Wyzerowanie połączenia
+      }
+    } else {
+      print('Brak aktywnego połączenia OBD do rozłączenia.');
+    }
+  }
+
+  /// Zwalnia zasoby
   void dispose() {
     _speedController.close();
     _temperatureController.close();
     _fuelConsumptionController.close();
     _rpmController.close();
     stopDataCollection();
+    disconnectObdConnection(); // Upewnij się, że połączenie jest rozłączone
+    print('LiveDataService zamknięty.');
   }
 }

@@ -3,14 +3,15 @@ import 'package:permission_handler/permission_handler.dart';
 import 'bluetooth_connection_service.dart';
 
 class BluetoothConnectionScreen extends StatefulWidget {
-  const BluetoothConnectionScreen({Key? key}) : super(key: key);
+  final BluetoothConnectionService bluetoothService;
+
+  const BluetoothConnectionScreen({Key? key, required this.bluetoothService}) : super(key: key);
 
   @override
   _BluetoothConnectionScreenState createState() => _BluetoothConnectionScreenState();
 }
 
 class _BluetoothConnectionScreenState extends State<BluetoothConnectionScreen> {
-  final BluetoothConnectionService _bluetoothService = BluetoothConnectionService();
   bool _isConnecting = false;
 
   @override
@@ -46,11 +47,14 @@ class _BluetoothConnectionScreenState extends State<BluetoothConnectionScreen> {
       _isConnecting = true;
     });
 
-    await _bluetoothService.connectToOBDDevice(context);
+    await widget.bluetoothService.connectToOBDDevice(context);
 
     setState(() {
       _isConnecting = false;
     });
+
+    // Powrót do poprzedniego ekranu z informacją o wyniku
+    Navigator.pop(context, widget.bluetoothService.isConnected.value);
   }
 
   @override
@@ -83,7 +87,7 @@ class _BluetoothConnectionScreenState extends State<BluetoothConnectionScreen> {
                 ),
                 child: _isConnecting
                     ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('Połącz z OBD', style: TextStyle(fontSize: 18, color: Colors.black),),
+                    : const Text('Połącz z OBD', style: TextStyle(fontSize: 18, color: Colors.black)),
               ),
             ],
           ),
