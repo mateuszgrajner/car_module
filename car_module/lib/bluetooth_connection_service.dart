@@ -4,8 +4,6 @@ import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart' as bluet
 import 'package:flutter_blue_plus/flutter_blue_plus.dart' as blue_plus;
 import 'package:flutter/material.dart';
 
-
-
 class BluetoothConnectionService {
   bluetooth_serial.BluetoothConnection? _sppConnection;
   final ValueNotifier<bool> isConnected = ValueNotifier<bool>(false);
@@ -16,11 +14,6 @@ class BluetoothConnectionService {
 
   /// Getter dla aktualnie połączonego urządzenia SPP
   bluetooth_serial.BluetoothDevice? get connectedDevice => sppDevice;
-
-  /// Obsługa uprawnień (opcjonalnie do implementacji w aplikacji)
-  Future<void> requestPermissions(BuildContext context) async {
-    // Dodaj logikę pobierania uprawnień, jeśli potrzebna
-  }
 
   /// Połącz z urządzeniem OBD
   Future<void> connectToOBDDevice(BuildContext context) async {
@@ -52,8 +45,12 @@ class BluetoothConnectionService {
       isConnected.value = true; // Zaktualizuj stan połączenia
       debugPrint('Połączono z urządzeniem SPP: ${sppDevice?.name}');
 
-      // Krok 5: Wysyłanie komend do OBD
-      await _initializeObdConnection();
+      // Krok 5: Zainicjuj połączenie z ECU
+      bool ecuConnected = await _initializeObdConnection();
+      if (!ecuConnected) {
+        throw Exception('Nie udało się nawiązać połączenia z ECU.');
+      }
+      debugPrint('Połączenie z ECU zakończone sukcesem.');
     } catch (e) {
       debugPrint('Błąd podczas połączenia: $e');
       await disconnectDevice(); // Rozłącz w przypadku błędu
@@ -107,39 +104,50 @@ class BluetoothConnectionService {
   }
 
   /// Połącz urządzenie BLE
-  /// Połącz urządzenie BLE
-Future<void> _connectBleDevice(blue_plus.BluetoothDevice device) async {
-  try {
-    await device.connect(autoConnect: false);
-    debugPrint('Połączono z urządzeniem BLE.');
+  Future<void> _connectBleDevice(blue_plus.BluetoothDevice device) async {
+    try {
+      await device.connect(autoConnect: false);
+      debugPrint('Połączono z urządzeniem BLE.');
 
-    // Zmniejsz MTU lub usuń, jeśli problem się powtarza
-    await device.requestMtu(256);
-    debugPrint('MTU ustawione.');
+      // Zmniejsz MTU lub usuń, jeśli problem się powtarza
+      await device.requestMtu(256);
+      debugPrint('MTU ustawione.');
 
-    // Zwiększ czas oczekiwania przed rozłączeniem
-    await Future.delayed(const Duration(seconds: 5));
-    await device.disconnect();
-    debugPrint('Rozłączono urządzenie BLE.');
-  } catch (e) {
-    debugPrint('Błąd podczas połączenia z urządzeniem BLE: $e');
-    rethrow; // Ponowne rzucenie wyjątku
+      // Zwiększ czas oczekiwania przed rozłączeniem
+      await Future.delayed(const Duration(seconds: 5));
+      await device.disconnect();
+      debugPrint('Rozłączono urządzenie BLE.');
+    } catch (e) {
+      debugPrint('Błąd podczas połączenia z urządzeniem BLE: $e');
+      rethrow; // Ponowne rzucenie wyjątku
+    }
   }
-}
-
 
   /// Zainicjuj połączenie OBD
-  Future<void> _initializeObdConnection() async {
-    await _sendObdCommand('ATZ'); // Reset
-    await Future.delayed(const Duration(milliseconds: 500));
-    await _sendObdCommand('ATE0'); // Wyłącz echo
-    await _sendObdCommand('ATL0'); // Wyłącz nową linię
-    await _sendObdCommand('ATSP0'); // Automatyczny protokół
-    debugPrint('Wysłano wszystkie komendy inicjalizacyjne.');
+  Future<bool> _initializeObdConnection() async {
+    try {
+      await _sendObdCommandWithoutResponse('ATZ'); // Reset
+      await Future.delayed(const Duration(milliseconds: 500));
+      await _sendObdCommandWithoutResponse('ATE0'); // Wyłącz echo
+      await _sendObdCommandWithoutResponse('ATL0'); // Wyłącz podział linii
+      await _sendObdCommandWithoutResponse('ATSP0'); // Automatyczny protokół
+
+      // Sprawdzenie połączenia z ECU
+      String response = await _sendObdCommandWithResponse('0100');
+      if (response.startsWith('41 00')) {
+        return true;
+      } else {
+        debugPrint('ECU nie odpowiedziało poprawnie na komendę.');
+        return false;
+      }
+    } catch (e) {
+      debugPrint('Błąd podczas inicjalizacji OBD: $e');
+      return false;
+    }
   }
 
-  /// Wysyłanie komendy do OBD
-  Future<void> _sendObdCommand(String command) async {
+  /// Wysyłanie komendy bez oczekiwania na odpowiedź
+  Future<void> _sendObdCommandWithoutResponse(String command) async {
     if (_sppConnection != null && _sppConnection!.isConnected) {
       try {
         _sppConnection!.output.add(utf8.encode('$command\r\n'));
@@ -147,6 +155,27 @@ Future<void> _connectBleDevice(blue_plus.BluetoothDevice device) async {
         debugPrint('Wysłano komendę: $command');
       } catch (e) {
         debugPrint('Błąd podczas wysyłania komendy: $e');
+      }
+    } else {
+      throw Exception('Brak aktywnego połączenia SPP.');
+    }
+  }
+
+  /// Wysyłanie komendy i odbieranie odpowiedzi
+  Future<String> _sendObdCommandWithResponse(String command) async {
+    if (_sppConnection != null && _sppConnection!.isConnected) {
+      try {
+        _sppConnection!.output.add(utf8.encode('$command\r\n'));
+        await _sppConnection!.output.allSent;
+
+        // Odbieranie odpowiedzi
+        final response = await _sppConnection!.input!.toList();
+        String result = utf8.decode(response.expand((e) => e).toList());
+        debugPrint('Odpowiedź: $result');
+        return result.trim();
+      } catch (e) {
+        debugPrint('Błąd podczas wysyłania komendy: $e');
+        rethrow;
       }
     } else {
       throw Exception('Brak aktywnego połączenia SPP.');
@@ -164,4 +193,3 @@ Future<void> _connectBleDevice(blue_plus.BluetoothDevice device) async {
     debugPrint('Błąd podczas połączenia: $e');
   }
 }
-

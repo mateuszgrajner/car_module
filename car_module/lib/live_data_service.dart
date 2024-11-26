@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:car_module/database_helper.dart';
 import 'package:flutter/material.dart';
 import 'obd_connection.dart';
@@ -15,13 +14,13 @@ class LiveDataService {
 
   ObdConnection? _obdConnection; // Dynamiczna implementacja połączenia OBD
 
-  // Controllers for the different data streams
+  // Kontrolery strumieni danych
   final _speedController = StreamController<double>.broadcast();
   final _temperatureController = StreamController<double>.broadcast();
   final _fuelConsumptionController = StreamController<double>.broadcast();
   final _rpmController = StreamController<double>.broadcast();
 
-  // Stream getters
+  // Gettery dla strumieni danych
   Stream<double> get speedStream => _speedController.stream;
   Stream<double> get temperatureStream => _temperatureController.stream;
   Stream<double> get fuelConsumptionStream => _fuelConsumptionController.stream;
@@ -29,15 +28,14 @@ class LiveDataService {
 
   /// Ustaw implementację połączenia OBD
   void setObdConnection(ObdConnection connection) {
-  _obdConnection = connection;
-  debugPrint('Ustawiono połączenie OBD: $connection');
-}
+    _obdConnection = connection;
+    debugPrint('Ustawiono połączenie OBD: $connection');
+  }
 
-
-  /// Rozpoczyna zbieranie danych
+  /// Rozpoczyna zbieranie danych (obsługuje zarówno tryb symulacji, jak i prawdziwe połączenie)
   void startDataCollection() {
     if (_isCollectingData) {
-      debugPrint('Zbieranie danych już trwa, pomijam.');
+      debugPrint('Zbieranie danych już trwa.');
       return;
     }
 
@@ -48,35 +46,48 @@ class LiveDataService {
     _isCollectingData = true;
     debugPrint('Rozpoczynanie zbierania danych...');
 
-    _dataCollectionTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
+    _dataCollectionTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
       if (_isCollectingData) {
         try {
-          // Pobierz dane z OBD (lub symuluj w trybie demo)
-          final simulatedSpeed = double.tryParse(await _obdConnection!.sendCommand('GET_SPEED')) ?? 0.0;
-          final simulatedTemperature = double.tryParse(await _obdConnection!.sendCommand('GET_TEMP')) ?? 0.0;
-          final simulatedFuelConsumption = double.tryParse(await _obdConnection!.sendCommand('GET_FUEL')) ?? 0.0;
-          final simulatedRPM = double.tryParse(await _obdConnection!.sendCommand('GET_RPM')) ?? 0.0;
+          final speed = await _fetchValue('010D'); // Prędkość
+          final temperature = await _fetchValue('0105'); // Temperatura
+          final fuelConsumption = await _fetchValue('015E'); // Spalanie
+          final rpm = await _fetchValue('010C'); // Obroty silnika
 
-          // Wysyłanie danych do strumieni
-          _speedController.add(simulatedSpeed);
-          _temperatureController.add(simulatedTemperature);
-          _fuelConsumptionController.add(simulatedFuelConsumption);
-          _rpmController.add(simulatedRPM);
+          // Emituj dane do strumieni
+          _speedController.add(speed);
+          _temperatureController.add(temperature);
+          _fuelConsumptionController.add(fuelConsumption);
+          _rpmController.add(rpm);
 
           // Logowanie danych w bazie
           final dbHelper = DatabaseHelper.instance;
           await dbHelper.insertLiveDataLog(
-            fuelConsumption: simulatedFuelConsumption,
-            temperature: simulatedTemperature,
-            speed: simulatedSpeed,
+            speed: speed,
+            temperature: temperature,
+            fuelConsumption: fuelConsumption,
           );
-          print('Dane zapisane w bazie: Speed = $simulatedSpeed, Temp = $simulatedTemperature, Fuel = $simulatedFuelConsumption, RPM = $simulatedRPM');
+
+          debugPrint(
+              'Dane zapisane: Speed=$speed, Temp=$temperature, Fuel=$fuelConsumption, RPM=$rpm');
         } catch (e) {
-          print('Błąd podczas zbierania danych: $e');
+          debugPrint('Błąd podczas zbierania danych: $e');
           stopDataCollection(); // Zatrzymanie zbierania danych w przypadku błędu
         }
       }
     });
+  }
+
+  /// Pobierz wartość z połączenia OBD
+  Future<double> _fetchValue(String command) async {
+    try {
+      final response = await _obdConnection!.sendCommand(command);
+      final parts = response.split(' ');
+      return double.tryParse(parts.last) ?? 0.0;
+    } catch (e) {
+      debugPrint('Błąd podczas pobierania wartości: $e');
+      return 0.0;
+    }
   }
 
   /// Zatrzymuje zbieranie danych
@@ -84,9 +95,9 @@ class LiveDataService {
     if (_isCollectingData) {
       _dataCollectionTimer?.cancel();
       _isCollectingData = false;
-      print('Zbieranie danych zatrzymane.');
+      debugPrint('Zbieranie danych zatrzymane.');
     } else {
-      print('Brak aktywnego zbierania danych do zatrzymania.');
+      debugPrint('Brak aktywnego zbierania danych do zatrzymania.');
     }
   }
 
@@ -95,14 +106,14 @@ class LiveDataService {
     if (_obdConnection != null) {
       try {
         await _obdConnection!.disconnect();
-        print('Połączenie OBD zostało rozłączone.');
+        debugPrint('Połączenie OBD zostało rozłączone.');
       } catch (e) {
-        print('Błąd podczas rozłączania połączenia OBD: $e');
+        debugPrint('Błąd podczas rozłączania połączenia OBD: $e');
       } finally {
-        _obdConnection = null; // Wyzerowanie połączenia
+        _obdConnection = null;
       }
     } else {
-      print('Brak aktywnego połączenia OBD do rozłączenia.');
+      debugPrint('Brak aktywnego połączenia OBD do rozłączenia.');
     }
   }
 
@@ -113,7 +124,7 @@ class LiveDataService {
     _fuelConsumptionController.close();
     _rpmController.close();
     stopDataCollection();
-    disconnectObdConnection(); // Upewnij się, że połączenie jest rozłączone
-    print('LiveDataService zamknięty.');
+    disconnectObdConnection();
+    debugPrint('LiveDataService zamknięty.');
   }
 }
