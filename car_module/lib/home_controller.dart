@@ -59,7 +59,7 @@ class HomeController extends ChangeNotifier {
       // Ustaw DemoObdConnection jako aktywne połączenie
       final demoConnection = DemoObdConnection();
       await demoConnection.connect(); // Upewniamy się, że DemoObdConnection jest "połączone"
-      liveDataService.setObdConnection(demoConnection);
+      liveDataService.setObdConnection(demoConnection as ObdConnection);
 
       startDataCollectionIfNeeded();
     } else {

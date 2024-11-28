@@ -91,8 +91,7 @@ class DatabaseHelper {
           temperature REAL,
           speed REAL
         )
-      '''
-      );
+      ''');
     }
     if (oldVersion < 3) {
       await db.execute('''
@@ -168,11 +167,13 @@ class DatabaseHelper {
 
   Future<int> getErrorCodeCount() async {
     final db = await instance.database;
-    final result = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM error_codes'));
+    final result = Sqflite.firstIntValue(
+        await db.rawQuery('SELECT COUNT(*) FROM error_codes'));
     return result ?? 0;
   }
 
-  Future<void> insertReading(String date, String time, List<ErrorCode> errors) async {
+  Future<void> insertReading(
+      String date, String time, List<ErrorCode> errors) async {
     final db = await instance.database;
 
     // Wstawianie odczytu do dziennika
@@ -219,7 +220,11 @@ class DatabaseHelper {
   }
 
   // Metoda do rejestrowania logów połączeń OBD
-  Future<void> insertConnectionLog({required String startTime, String? endTime, required String status, String? errorMessage}) async {
+  Future<void> insertConnectionLog(
+      {required String startTime,
+      String? endTime,
+      required String status,
+      String? errorMessage}) async {
     final db = await instance.database;
     await db.insert('connection_logs', {
       'start_time': startTime,
@@ -229,13 +234,18 @@ class DatabaseHelper {
     });
   }
 
-  Future<void> updateConnectionLog(int id, {String? endTime, String? status, String? errorMessage}) async {
+  Future<void> updateConnectionLog(int id,
+      {String? endTime, String? status, String? errorMessage}) async {
     final db = await instance.database;
-    await db.update('connection_logs', {
-      if (endTime != null) 'end_time': endTime,
-      if (status != null) 'status': status,
-      if (errorMessage != null) 'error_message': errorMessage,
-    }, where: 'id = ?', whereArgs: [id]);
+    await db.update(
+        'connection_logs',
+        {
+          if (endTime != null) 'end_time': endTime,
+          if (status != null) 'status': status,
+          if (errorMessage != null) 'error_message': errorMessage,
+        },
+        where: 'id = ?',
+        whereArgs: [id]);
   }
 
   Future<void> close() async {

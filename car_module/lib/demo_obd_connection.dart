@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:math';
-import 'obd_connection.dart';
+import 'error_code_model.dart';
+import 'database_helper.dart';
 
-class DemoObdConnection implements ObdConnection {
+class DemoObdConnection {
   bool _isConnected = false;
   Timer? _simulationTimer;
 
-  // Symulowany stan pojazdu
   final Map<String, double> _vehicleState = {
     'speed': 0.0,
     'rpm': 800.0,
@@ -17,38 +17,74 @@ class DemoObdConnection implements ObdConnection {
   int _simulationStep = 0;
   static const int maxSimulationSteps = 60;
 
-  @override
+  List<ErrorCode> _dtcCodes = [];
+
+  bool _isValidErrorCode(String code) {
+    if (code.length != 5 || !code.startsWith('P')) return false;
+    final numericPart = int.tryParse(code.substring(1));
+    return numericPart != null && numericPart >= 0 && numericPart <= 1466;
+  }
+
   Future<void> connect() async {
     _isConnected = true;
     print('DemoObdConnection: Połączono (tryb demo).');
+    _generateRandomDtcCodes();
     _startSimulation();
   }
 
-  @override
   Future<void> disconnect() async {
     _isConnected = false;
     _simulationTimer?.cancel();
     print('DemoObdConnection: Rozłączono (tryb demo).');
   }
 
-  @override
-  Future<String> sendCommand(String command) async {
+  Future<List<ErrorCode>> fetchErrorCodes() async {
     if (!_isConnected) {
       throw Exception('DemoObdConnection: Nie połączono.');
     }
 
-    switch (command) {
-      case '010C':
-        return '41 0C ${_formatHexValue(_vehicleState['rpm']! / 4, 4)}';
-      case '010D':
-        return '41 0D ${_formatHexValue(_vehicleState['speed']!, 2)}';
-      case '0105':
-        return '41 05 ${_formatHexValue(_vehicleState['temp']! - 40, 2)}';
-      case '015E':
-        return '41 5E ${_formatHexValue(_vehicleState['fuel']!, 2)}';
-      default:
-        return 'NO DATA';
+    return _dtcCodes;
+  }
+
+  Future<void> clearErrorCodes() async {
+    if (!_isConnected) {
+      throw Exception('DemoObdConnection: Nie połączono.');
     }
+    _dtcCodes.clear();
+    print('DemoObdConnection: Błędy zostały wyczyszczone.');
+  }
+
+  Future<List<ErrorCode>> mapErrorCodes() async {
+    final dbHelper = DatabaseHelper.instance;
+    final databaseCodes = await dbHelper.getAllErrorCodes();
+    final errorCodeList = databaseCodes.map((e) => e.code.toUpperCase()).toList();
+
+    return _dtcCodes.map((code) {
+      if (errorCodeList.contains(code.code)) {
+        return databaseCodes.firstWhere((dbCode) => dbCode.code == code.code);
+      } else {
+        return ErrorCode(
+          id: 0,
+          code: code.code,
+          description: 'Nieznany błąd ECU',
+        );
+      }
+    }).toList();
+  }
+
+  void _generateRandomDtcCodes() {
+    final random = Random();
+    _dtcCodes = List.generate(
+      random.nextInt(4) + 1,
+      (_) {
+        final code = 'P${random.nextInt(1467).toString().padLeft(4, '0')}';
+        return ErrorCode(
+          id: 0,
+          code: code,
+          description: 'Losowy opis błędu dla kodu $code',
+        );
+      },
+    );
   }
 
   void _startSimulation() {
@@ -60,66 +96,49 @@ class DemoObdConnection implements ObdConnection {
 
   void _simulateVehicleState() {
     _simulationStep++;
-
     if (_simulationStep <= 15) {
       _accelerate(120.0, 15, _simulationStep);
     } else if (_simulationStep <= 30) {
       _maintainSpeed(120.0);
     } else if (_simulationStep <= 45) {
       _decelerate(0.0, 15, _simulationStep - 30);
-    } else if (_simulationStep <= 60) {
+    } else {
       _idle();
-    } else {
-      _simulationStep = 0;
     }
-
-    if (_vehicleState['temp']! < 90.0) {
-      _vehicleState['temp'] = _vehicleState['temp']! + 2.0;
-    } else {
-      _vehicleState['temp'] = 90.0;
-    }
+    _updateTemperature();
   }
 
   void _accelerate(double targetSpeed, int durationInSeconds, int elapsedTime) {
-    final initialSpeed = 0.0;
-    final speedIncrementPerSecond = (targetSpeed - initialSpeed) / durationInSeconds;
-    _vehicleState['speed'] = min(targetSpeed, initialSpeed + (speedIncrementPerSecond * elapsedTime));
+    final increment = (targetSpeed - _vehicleState['speed']!) / durationInSeconds;
+    _vehicleState['speed'] = min(targetSpeed, _vehicleState['speed']! + increment);
     _updateRpm();
-    _updateFuelConsumption();
   }
 
   void _maintainSpeed(double speed) {
     _vehicleState['speed'] = speed;
     _vehicleState['rpm'] = 2000.0;
-    _vehicleState['fuel'] = 7.0;
   }
 
   void _decelerate(double targetSpeed, int durationInSeconds, int elapsedTime) {
-    final initialSpeed = 120.0;
-    final speedDecrementPerSecond = (initialSpeed - targetSpeed) / durationInSeconds;
-    _vehicleState['speed'] = max(targetSpeed, initialSpeed - (speedDecrementPerSecond * elapsedTime));
+    final decrement = (_vehicleState['speed']! - targetSpeed) / durationInSeconds;
+    _vehicleState['speed'] = max(targetSpeed, _vehicleState['speed']! - decrement);
     _updateRpm();
-    _updateFuelConsumption();
   }
 
   void _idle() {
     _vehicleState['speed'] = 0.0;
     _vehicleState['rpm'] = 800.0;
-    _vehicleState['fuel'] = 0.8;
   }
 
   void _updateRpm() {
     _vehicleState['rpm'] = 800.0 + (_vehicleState['speed']! * 40.0);
   }
 
-  void _updateFuelConsumption() {
-    final rpm = _vehicleState['rpm']!;
-    final speed = _vehicleState['speed']!;
-    _vehicleState['fuel'] = max(0.8, 2.0 + (rpm / 1000.0) + (speed / 100.0));
-  }
-
-  String _formatHexValue(double value, int length) {
-    final intValue = value.round();
-    return intValue.toRadixString(16).padLeft(length, '0').toUpperCase();
+  void _updateTemperature() {
+    if (_vehicleState['temp']! < 90.0) {
+      _vehicleState['temp'] = _vehicleState['temp']! + 2.0;
+    } else {
+      _vehicleState['temp'] = 90.0;
+    }
   }
 }
