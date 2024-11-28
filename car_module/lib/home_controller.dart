@@ -49,7 +49,7 @@ class HomeController extends ChangeNotifier {
     }
   }
 
-  /// Włącz tryb testowy
+    /// Włącz tryb testowy
   Future<void> enterTestMode() async {
     if (!isTestMode) {
       print('Włączanie trybu testowego...');
@@ -66,6 +66,7 @@ class HomeController extends ChangeNotifier {
       print('Tryb testowy już jest włączony, pomijam.');
     }
   }
+
 
   /// Wyłącz tryb testowy
   Future<void> exitTestMode() async {

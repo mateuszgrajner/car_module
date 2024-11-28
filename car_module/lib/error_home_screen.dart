@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'app_bar_custom.dart';
 import 'white_container.dart';
 import 'loading_dialog.dart';
-import 'dart:math';
-import 'package:car_module/database_helper.dart';
+import 'package:car_module/demo_obd_connection.dart';
 import 'package:car_module/error_code_model.dart';
+import 'package:car_module/database_helper.dart';
 
 class ErrorHomeScreen extends StatefulWidget {
   final Color color;
@@ -18,35 +18,85 @@ class ErrorHomeScreen extends StatefulWidget {
 class _ErrorHomeScreenState extends State<ErrorHomeScreen> {
   List<ErrorCode> errorCodes = [];
   bool isDeleted = false;
+  final DemoObdConnection demoConnection = DemoObdConnection();
 
-  Future<void> generateRandomErrors() async {
-  final dbHelper = DatabaseHelper.instance;
-  final errorCodeCount = await dbHelper.getErrorCodeCount();
+  Future<void> _readErrors() async {
+    try {
+      print('Rozpoczynam odczyt błędów...');
+      await demoConnection.connect();
+      final rawErrors = await demoConnection.sendCommand('03');
+      print('Otrzymane surowe błędy: $rawErrors');
 
-  if (errorCodeCount == 0) {
-    // Brak dostępnych kodów błędów w bazie danych
-    setState(() {
-      errorCodes = [];
-    });
-    return;
+      if (rawErrors == 'NO DATA') {
+        setState(() {
+          errorCodes = [];
+        });
+        return;
+      }
+
+      final codes = rawErrors.split(',').map((e) => e.trim().toUpperCase()).toList();
+      final dbHelper = DatabaseHelper.instance;
+
+      final allErrorCodes = await dbHelper.getAllErrorCodes();
+      final errorCodeList = allErrorCodes.map((e) => e.code.toUpperCase()).toList();
+
+      final mappedErrors = codes.map((code) {
+        if (errorCodeList.contains(code)) {
+          return allErrorCodes.firstWhere((e) => e.code == code);
+        } else {
+          return ErrorCode(
+            id: 0,
+            code: code,
+            description: 'Nieznany błąd ECU',
+          );
+        }
+      }).toList();
+
+      setState(() {
+        errorCodes = mappedErrors;
+      });
+
+      // Zapisz odczyt błędów w bazie danych
+      final now = DateTime.now();
+      await dbHelper.insertReading(
+        '${now.day}.${now.month}.${now.year}',
+        '${now.hour}:${now.minute}',
+        errorCodes,
+      );
+      print('Błędy zostały zapisane w bazie.');
+    } catch (e) {
+      print('Błąd podczas odczytu błędów: $e');
+    } finally {
+      await demoConnection.disconnect();
+    }
   }
 
-  print('Pobieram wszystkie kody błędów...');
-  // Pobierz wszystkie kody błędów
-  final allErrorCodes = await dbHelper.getAllErrorCodes();
-  print('Pobrane kody błędów: ${allErrorCodes.length}');
+  Future<void> _clearErrors() async {
+    try {
+      print('Rozpoczynam kasowanie błędów...');
+      await demoConnection.connect();
+      await demoConnection.sendCommand('04');
+      setState(() {
+        errorCodes = [];
+        isDeleted = true;
+      });
+      print('Błędy zostały skasowane.');
+    } catch (e) {
+      print('Błąd podczas kasowania błędów: $e');
+    } finally {
+      await demoConnection.disconnect();
+    }
+  }
 
-  // Generowanie losowych kodów błędów z bazy danych
-  final random = Random();
-  final selectedErrorCodes = List<ErrorCode>.generate(
-    allErrorCodes.length < 4 ? allErrorCodes.length : 4,
-    (index) => allErrorCodes[random.nextInt(allErrorCodes.length)],
-  );
-
-  setState(() {
-    errorCodes = selectedErrorCodes;
-  });
-}
+  Future<void> _handleButtonPress() async {
+    if (errorCodes.isEmpty) {
+      await _showLoadingDialog('Trwa skanowanie...');
+      await _readErrors();
+    } else {
+      await _showLoadingDialog('Usuwanie błędów...');
+      await _clearErrors();
+    }
+  }
 
   Future<void> _showLoadingDialog(String message) async {
     showDialog(
@@ -56,41 +106,8 @@ class _ErrorHomeScreenState extends State<ErrorHomeScreen> {
     );
 
     await Future.delayed(const Duration(seconds: 2));
-
-    Navigator.of(context).pop(); // Zamknięcie dialogu po odczekaniu
+    Navigator.of(context).pop();
   }
-
-  void _deleteErrors() {
-    setState(() {
-      errorCodes.clear();
-      isDeleted = true;
-    });
-  }
-
-  void _handleButtonPress() async {
-  if (errorCodes.isEmpty) {
-    await _showLoadingDialog('Trwa skanowanie...');
-    await generateRandomErrors();
-
-    // Zapisz odczyt do bazy danych
-    if (errorCodes.isNotEmpty) {
-      final dbHelper = DatabaseHelper.instance;
-      final now = DateTime.now();
-      await dbHelper.insertReading(
-        '${now.day}.${now.month}.${now.year}',
-        '${now.hour}:${now.minute}',
-        errorCodes,
-      );
-    }
-
-    setState(() {
-      isDeleted = false;
-    });
-  } else {
-    await _showLoadingDialog('Usuwanie błędów...');
-    _deleteErrors();
-  }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -117,7 +134,7 @@ class _ErrorHomeScreenState extends State<ErrorHomeScreen> {
                 child: errorCodes.isEmpty
                     ? Center(
                         child: Text(
-                          isDeleted ? 'Brak błędów' : 'Kliknij odczyt aby rozpocząć skanowanie',
+                          isDeleted ? 'Brak błędów' : 'Kliknij odczyt, aby rozpocząć skanowanie',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 18.0,
