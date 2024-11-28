@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'app_bar_custom.dart';
-import 'feature_card.dart';
-import 'white_container.dart';
+import '../core/app_bar_custom.dart';
+import '../core/feature_card.dart';
+import '../core/white_container.dart';
 
 
 class LiveDataScreen extends StatelessWidget {

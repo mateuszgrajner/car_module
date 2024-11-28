@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'app_bar_custom.dart';
-import 'white_container.dart';
-import 'loading_dialog.dart';
-import 'package:car_module/error_code_model.dart';
-import 'demo_obd_connection.dart';
+import '../core/app_bar_custom.dart';
+import '../core/white_container.dart';
+import '../core/loading_dialog.dart';
+import 'package:car_module/models/error_code_model.dart';
+import '../services/demo_obd_connection.dart';
 
 class ErrorHomeScreen extends StatefulWidget {
   final Color color;

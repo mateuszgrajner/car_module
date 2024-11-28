@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:math';
-import 'error_code_model.dart';
+import '../models/error_code_model.dart';
 import 'database_helper.dart';
 
 class DemoObdConnection {

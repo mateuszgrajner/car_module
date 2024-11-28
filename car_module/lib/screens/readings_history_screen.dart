@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'app_bar_custom.dart';
-import 'white_container.dart';
-import 'reading_widget_card.dart';
-import 'package:car_module/database_helper.dart';
+import '../core/app_bar_custom.dart';
+import '../core/white_container.dart';
+import '../core/reading_widget_card.dart';
+import 'package:car_module/services/database_helper.dart';
 
 class ReadingsLogScreen extends StatefulWidget {
   const ReadingsLogScreen({super.key});

@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'app_bar_custom.dart';
-import 'white_container.dart';
+import '../core/app_bar_custom.dart';
+import '../core/white_container.dart';
 
 class ChartWidget extends StatefulWidget {
   final String title;
