@@ -1,18 +1,9 @@
 import 'package:flutter/material.dart';
-<<<<<<< HEAD:car_module/lib/screens/error_home_screen.dart
-import '../core/app_bar_custom.dart';
-import '../core/white_container.dart';
-import '../core/loading_dialog.dart';
-import 'package:car_module/models/error_code_model.dart';
-import '../services/demo_obd_connection.dart';
-=======
 import 'app_bar_custom.dart';
 import 'white_container.dart';
 import 'loading_dialog.dart';
-import 'package:car_module/demo_obd_connection.dart';
 import 'package:car_module/error_code_model.dart';
-import 'package:car_module/database_helper.dart';
->>>>>>> 73a5707 (Added an full demo logic):car_module/lib/error_home_screen.dart
+import 'demo_obd_connection.dart';
 
 class ErrorHomeScreen extends StatefulWidget {
   final Color color;
@@ -32,7 +23,6 @@ class _ErrorHomeScreenState extends State<ErrorHomeScreen> {
     try {
       print('Rozpoczynam odczyt błędów...');
       await demoConnection.connect();
-<<<<<<< HEAD:car_module/lib/screens/error_home_screen.dart
       final fetchedCodes = await demoConnection.fetchErrorCodes();
       final mappedCodes = await demoConnection.mapErrorCodes();
 
@@ -41,48 +31,6 @@ class _ErrorHomeScreenState extends State<ErrorHomeScreen> {
       });
 
       print('Odczytane i zmapowane błędy: $errorCodes');
-=======
-      final rawErrors = await demoConnection.sendCommand('03');
-      print('Otrzymane surowe błędy: $rawErrors');
-
-      if (rawErrors == 'NO DATA') {
-        setState(() {
-          errorCodes = [];
-        });
-        return;
-      }
-
-      final codes = rawErrors.split(',').map((e) => e.trim().toUpperCase()).toList();
-      final dbHelper = DatabaseHelper.instance;
-
-      final allErrorCodes = await dbHelper.getAllErrorCodes();
-      final errorCodeList = allErrorCodes.map((e) => e.code.toUpperCase()).toList();
-
-      final mappedErrors = codes.map((code) {
-        if (errorCodeList.contains(code)) {
-          return allErrorCodes.firstWhere((e) => e.code == code);
-        } else {
-          return ErrorCode(
-            id: 0,
-            code: code,
-            description: 'Nieznany błąd ECU',
-          );
-        }
-      }).toList();
-
-      setState(() {
-        errorCodes = mappedErrors;
-      });
-
-      // Zapisz odczyt błędów w bazie danych
-      final now = DateTime.now();
-      await dbHelper.insertReading(
-        '${now.day}.${now.month}.${now.year}',
-        '${now.hour}:${now.minute}',
-        errorCodes,
-      );
-      print('Błędy zostały zapisane w bazie.');
->>>>>>> 73a5707 (Added an full demo logic):car_module/lib/error_home_screen.dart
     } catch (e) {
       print('Błąd podczas odczytu błędów: $e');
     } finally {
@@ -94,11 +42,7 @@ class _ErrorHomeScreenState extends State<ErrorHomeScreen> {
     try {
       print('Rozpoczynam kasowanie błędów...');
       await demoConnection.connect();
-<<<<<<< HEAD:car_module/lib/screens/error_home_screen.dart
       await demoConnection.clearErrorCodes();
-=======
-      await demoConnection.sendCommand('04');
->>>>>>> 73a5707 (Added an full demo logic):car_module/lib/error_home_screen.dart
       setState(() {
         errorCodes = [];
         isDeleted = true;
@@ -157,13 +101,9 @@ class _ErrorHomeScreenState extends State<ErrorHomeScreen> {
                 child: errorCodes.isEmpty
                     ? Center(
                         child: Text(
-<<<<<<< HEAD:car_module/lib/screens/error_home_screen.dart
                           isDeleted
                               ? 'Brak błędów'
                               : 'Kliknij odczyt, aby rozpocząć skanowanie',
-=======
-                          isDeleted ? 'Brak błędów' : 'Kliknij odczyt, aby rozpocząć skanowanie',
->>>>>>> 73a5707 (Added an full demo logic):car_module/lib/error_home_screen.dart
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 18.0,

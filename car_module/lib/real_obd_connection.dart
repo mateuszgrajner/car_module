@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import '../services/obd_connection.dart';
+import 'obd_connection.dart';
 
 class RealObdConnection implements ObdConnection {
   final BluetoothDevice device;

@@ -1,11 +1,11 @@
-import 'package:car_module/screens/bluetooth_connection_screen.dart';
+import 'package:car_module/bluetooth_connection_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart' as blue_plus; // Alias dla flutter_blue_plus
-import '../services/home_controller.dart';
-import '../core/feature_card.dart';
-import '../core/app_bar_custom.dart';
-import '../core/white_container.dart';
-import '../services/bluetooth_connection_service.dart';
+import 'home_controller.dart';
+import 'feature_card.dart';
+import 'app_bar_custom.dart';
+import 'white_container.dart';
+import 'bluetooth_connection_service.dart';
 
 class HomeScreen extends StatefulWidget {
   final BluetoothConnectionService bluetoothService;

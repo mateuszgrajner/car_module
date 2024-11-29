@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/chart_widget.dart';
-import '../services/live_data_service.dart';
+import 'chart_widget.dart';
+import 'live_data_service.dart';
 
 class EngineRpmScreen extends StatelessWidget {
   final LiveDataService liveDataService;
