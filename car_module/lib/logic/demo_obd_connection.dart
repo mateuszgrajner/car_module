@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:math';
-import 'package:car_module/obd_connection.dart';
+import 'package:car_module/logic/obd_connection.dart';
 
 class DemoObdConnection implements ObdConnection {
   bool _isConnected = false;

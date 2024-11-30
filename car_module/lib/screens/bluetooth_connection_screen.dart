@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'bluetooth_connection_service.dart';
+import '../logic/bluetooth_connection_service.dart';
 
 class BluetoothConnectionScreen extends StatefulWidget {
   final BluetoothConnectionService bluetoothService;

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'chart_widget.dart';
-import 'live_data_service.dart';
+import '../widgets/chart_widget.dart';
+import '../logic/live_data_service.dart';
 
 class VehicleSpeedScreen extends StatelessWidget {
   final LiveDataService liveDataService;

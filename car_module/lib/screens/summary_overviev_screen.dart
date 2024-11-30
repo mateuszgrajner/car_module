@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'app_bar_custom.dart';
-import 'white_container.dart';
-import 'summary_card_widget.dart';
-import 'custom_date_picker.dart';
-import 'package:car_module/database_helper.dart';
+import '../widgets/app_bar_custom.dart';
+import '../widgets/white_container.dart';
+import '../widgets/summary_card_widget.dart';
+import '../widgets/custom_date_picker.dart';
+import 'package:car_module/logic/database_helper.dart';
 
 class SummaryOverviewScreen extends StatefulWidget {
   const SummaryOverviewScreen({super.key});

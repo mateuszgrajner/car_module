@@ -1,4 +1,4 @@
-import 'package:car_module/database_helper.dart';
+import 'package:car_module/logic/database_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ErrorCode {

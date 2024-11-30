@@ -1,20 +1,19 @@
-import 'package:car_module/engine_temp_screen.dart';
-import 'package:car_module/fuel_screen.dart';
-import 'package:car_module/history_home_screen.dart';
-import 'package:car_module/settings_home_screen.dart';
-import 'package:car_module/speed_screen.dart';
-import 'package:car_module/summary_overviev_screen.dart';
-import 'package:car_module/bluetooth_connection_screen.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import 'readings_history_screen.dart';
-import 'data_home_screen.dart';
-import 'engine_rpm_screen.dart';
+import 'package:car_module/screens/engine_temp_screen.dart';
+import 'package:car_module/screens/fuel_screen.dart';
+import 'package:car_module/screens/history_home_screen.dart';
+import 'package:car_module/screens/settings_home_screen.dart';
+import 'package:car_module/screens/speed_screen.dart';
+import 'package:car_module/screens/summary_overviev_screen.dart';
+import 'package:car_module/screens/bluetooth_connection_screen.dart';
+import 'screens/readings_history_screen.dart';
+import 'screens/data_home_screen.dart';
+import 'screens/engine_rpm_screen.dart';
 import 'package:flutter/material.dart';
-import 'home_screen.dart';
-import 'error_home_screen.dart';
-import 'package:car_module/error_code_model.dart';
-import 'package:car_module/live_data_service.dart';
-import 'package:car_module/bluetooth_connection_service.dart';
+import 'screens/home_screen.dart';
+import 'screens/error_home_screen.dart';
+import 'package:car_module/helpers/error_code_model.dart';
+import 'package:car_module/logic/live_data_service.dart';
+import 'package:car_module/logic/bluetooth_connection_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // Aby mieć pewność, że wszystko jest zainicjalizowane

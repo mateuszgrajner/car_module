@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
-import 'app_bar_custom.dart';
-import 'feature_card.dart';
-import 'white_container.dart';
+import '../widgets/app_bar_custom.dart';
+import '../widgets/feature_card.dart';
+import '../widgets/white_container.dart';
 
-
-class LiveDataScreen extends StatelessWidget {
-
-  final Color color;
-  const LiveDataScreen({super.key, required this.color});
+class ReadingsHistoryScreen extends StatelessWidget {
+  const ReadingsHistoryScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -26,48 +23,32 @@ class LiveDataScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const AppBarCustom(title: 'Dane na żywo'),
+            const AppBarCustom(title: 'Historia odczytów'),
             const SizedBox(height: 16.0),
             // Grid z przyciskami opcji
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 32.0),
                 child: GridView.extent(
-                  maxCrossAxisExtent: 180.0, // Określenie maksymalnej szerokości dla kart
+                  maxCrossAxisExtent: 200.0,
                   mainAxisSpacing: 16.0,
                   crossAxisSpacing: 16.0,
                   childAspectRatio: 0.75,
                   children: [
                     FeatureCard(
-                      icon: Icons.speed,
-                      label: 'Obroty silnika',
+                      icon: Icons.receipt_long,
+                      label: 'Dziennik odczytów',
                       color: const Color.fromARGB(255, 86, 35, 135),
                       onTap: () {
-                       Navigator.pushNamed(context, '/rpm_screen');
+                        Navigator.pushNamed(context, '/readings_screen');
                       },
                     ),
                     FeatureCard(
-                      icon: Icons.thermostat,
-                      label: 'Temperatura',
-                      color: const Color.fromARGB(255, 183, 79, 79),
+                      icon: Icons.show_chart,
+                      label: 'Podsumowanie okresowe',
+                      color: const Color.fromARGB(255, 153, 45, 163),
                       onTap: () {
-                        Navigator.pushNamed(context, '/temp_screen');
-                      },
-                    ),
-                    FeatureCard(
-                      icon: Icons.directions_car,
-                      label: 'Prędkość',
-                      color: const Color.fromARGB(255, 63, 167, 153),
-                      onTap: () {
-                        Navigator.pushNamed(context, '/speed_screen');
-                      },
-                    ),
-                    FeatureCard(
-                      icon: Icons.local_gas_station,
-                      label: 'Spalanie',
-                      color: const Color.fromARGB(255, 204, 103, 196),
-                      onTap: () {
-                        Navigator.pushNamed(context, '/fuel_screen');
+                        Navigator.pushNamed(context, '/summary_screen');
                       },
                     ),
                   ],

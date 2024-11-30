@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'app_bar_custom.dart';
-import 'white_container.dart';
+import '../widgets/app_bar_custom.dart';
+import '../widgets/white_container.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
