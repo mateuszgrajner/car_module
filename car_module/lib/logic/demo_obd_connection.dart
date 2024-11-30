@@ -50,13 +50,13 @@ class DemoObdConnection implements ObdConnection {
     // Odpowiedzi na symulowane komendy OBD
     switch (command) {
       case '010C': // Obroty silnika (RPM)
-        return '41 0C ${_formatHexValue(_vehicleState['rpm']! / 4, 4)}';
+        return _buildObdResponse('41 0C', _vehicleState['rpm']! / 4, 4);
       case '010D': // Prędkość pojazdu (km/h)
-        return '41 0D ${_formatHexValue(_vehicleState['speed']!, 2)}';
+        return _buildObdResponse('41 0D', _vehicleState['speed']!, 2);
       case '0105': // Temperatura płynu chłodzącego (°C)
-        return '41 05 ${_formatHexValue(_vehicleState['temp']! - 40, 2)}';
+        return _buildObdResponse('41 05', _vehicleState['temp']! - 40, 2);
       case '015E': // Zużycie paliwa (l/100km)
-        return '41 5E ${_formatHexValue(_vehicleState['fuel']!, 2)}';
+        return _buildObdResponse('41 5E', _vehicleState['fuel']!, 2);
       case '03': // Odczyt kodów błędów
         return _dtcCodes.isNotEmpty
             ? '41 03 ${_dtcCodes.map((code) => _formatErrorCode(code)).join(',')}'
@@ -67,6 +67,12 @@ class DemoObdConnection implements ObdConnection {
       default:
         return 'NO DATA'; // Domyślna odpowiedź na nieznane komendy
     }
+  }
+
+  /// Buduje odpowiedź OBD-II w standardowym formacie
+  String _buildObdResponse(String pid, double value, int dataLength) {
+    String hexValue = _formatHexValue(value, dataLength);
+    return '$pid $hexValue';
   }
 
   /// Uruchamia symulację stanu pojazdu
