@@ -34,7 +34,10 @@ class _ErrorHomeScreenState extends State<ErrorHomeScreen> {
         return;
       }
 
-      final codes = rawErrors.split(',').map((e) => e.trim().toUpperCase()).toList();
+      final codes = rawErrors
+          .split(',')
+          .map((error) => error.split(' ').last)
+          .toList();
       final dbHelper = DatabaseHelper.instance;
 
       final allErrorCodes = await dbHelper.getAllErrorCodes();

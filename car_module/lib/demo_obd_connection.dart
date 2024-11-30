@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math';
-
 import 'package:car_module/obd_connection.dart';
 
 class DemoObdConnection implements ObdConnection {
@@ -21,6 +20,10 @@ class DemoObdConnection implements ObdConnection {
 
   @override
   Future<void> connect() async {
+    if (_isConnected) {
+      print('DemoObdConnection: Już połączono.');
+      return;
+    }
     _isConnected = true;
     print('DemoObdConnection: Połączono (tryb demo).');
     _generateRandomDtcCodes();
@@ -29,6 +32,10 @@ class DemoObdConnection implements ObdConnection {
 
   @override
   Future<void> disconnect() async {
+    if (!_isConnected) {
+      print('DemoObdConnection: Już rozłączono.');
+      return;
+    }
     _isConnected = false;
     _simulationTimer?.cancel();
     print('DemoObdConnection: Rozłączono (tryb demo).');
@@ -51,7 +58,9 @@ class DemoObdConnection implements ObdConnection {
       case '015E': // Zużycie paliwa (l/100km)
         return '41 5E ${_formatHexValue(_vehicleState['fuel']!, 2)}';
       case '03': // Odczyt kodów błędów
-        return _dtcCodes.isNotEmpty ? _dtcCodes.join(',') : 'NO DATA';
+        return _dtcCodes.isNotEmpty
+            ? '41 03 ${_dtcCodes.map((code) => _formatErrorCode(code)).join(',')}'
+            : 'NO DATA';
       case '04': // Kasowanie błędów
         _dtcCodes.clear();
         return 'OK';
@@ -73,22 +82,15 @@ class DemoObdConnection implements ObdConnection {
     _simulationStep++; // Następny etap symulacji
 
     if (_simulationStep <= 15) {
-      // Etap 1: Przyspieszanie
-      int elapsedTime = _simulationStep;
-      _accelerate(120.0, 15, elapsedTime);
+      _accelerate(120.0, 15, _simulationStep);
     } else if (_simulationStep <= 30) {
-      // Etap 2: Stała prędkość
       _maintainSpeed(120.0);
     } else if (_simulationStep <= 45) {
-      // Etap 3: Zwalnianie
-      int elapsedTime = _simulationStep - 30;
-      _decelerate(0.0, 15, elapsedTime);
+      _decelerate(0.0, 15, _simulationStep - 30);
     } else if (_simulationStep <= 60) {
-      // Etap 4: Postój
       _idle();
     } else {
-      // Reset cyklu symulacji
-      _simulationStep = 0;
+      _simulationStep = 0; // Reset cyklu
     }
 
     _updateTemperature();
@@ -129,58 +131,49 @@ class DemoObdConnection implements ObdConnection {
 
   /// Aktualizacja obrotów silnika
   void _updateRpm() {
-    if (_vehicleState['speed']! > 0) {
-      _vehicleState['rpm'] = 1000.0 + (_vehicleState['speed']! * 30.0);
-    } else {
-      _vehicleState['rpm'] = 800.0;
-    }
+    _vehicleState['rpm'] = _vehicleState['speed']! > 0
+        ? 1000.0 + (_vehicleState['speed']! * 30.0)
+        : 800.0;
   }
 
   /// Aktualizacja zużycia paliwa
   void _updateFuelConsumption() {
     final rpm = _vehicleState['rpm']!;
     final speed = _vehicleState['speed']!;
-    if (speed > 0) {
-      _vehicleState['fuel'] = 5.0 + (rpm / 1000.0) + (speed / 50.0);
-    } else {
-      _vehicleState['fuel'] = 0.8;
-    }
-    // Zapewnienie, że spalanie nie jest ujemne ani zerowe
-    if (_vehicleState['fuel']! <= 0) {
-      _vehicleState['fuel'] = 0.8;
-    }
+    _vehicleState['fuel'] = speed > 0
+        ? 5.0 + (rpm / 1000.0) + (speed / 50.0)
+        : 0.8;
   }
 
   /// Aktualizacja temperatury
   void _updateTemperature() {
-    if (_vehicleState['speed']! > 0) {
-      _vehicleState['temp'] = min(90.0, _vehicleState['temp']! + 1.0);
-    } else {
-      _vehicleState['temp'] = max(20.0, _vehicleState['temp']! - 0.5);
-    }
-    if (_vehicleState['temp']! <= 0) {
-      _vehicleState['temp'] = 20.0;
-    }
+    _vehicleState['temp'] = _vehicleState['speed']! > 0
+        ? min(90.0, _vehicleState['temp']! + 0.5)
+        : max(40.0, _vehicleState['temp']! - 0.2);
   }
 
-  /// Generuje losowe kody błędów (symulacja)
+  /// Generuje losowe kody błędów
   void _generateRandomDtcCodes() {
     final random = Random();
     _dtcCodes = List.generate(
-      random.nextInt(4) + 1, // Losowa liczba błędów (1-4)
-      (index) => 'P${random.nextInt(1467).toString().padLeft(4, '0')}',
+      random.nextInt(4) + 1,
+      (index) => 'P${random.nextInt(1000).toString().padLeft(4, '0')}',
     );
     print('Wygenerowane kody błędów: $_dtcCodes');
   }
 
+  /// Formatowanie kodu błędu
+  String _formatErrorCode(String code) {
+    return code;
+  }
+
   /// Logowanie stanu pojazdu
   void _logSimulationState() {
-    print('Symulacja: '
-        'Step=$_simulationStep, '
-        'Speed=${_vehicleState['speed']}, '
+    print('Symulacja: Speed=${_vehicleState['speed']}, '
         'RPM=${_vehicleState['rpm']}, '
         'Fuel=${_vehicleState['fuel']}, '
-        'Temp=${_vehicleState['temp']}');
+        'Temp=${_vehicleState['temp']}, '
+        'Errors=$_dtcCodes');
   }
 
   /// Formatuje wartości na postać szesnastkową dla OBD
